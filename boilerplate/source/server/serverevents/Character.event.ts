@@ -5,6 +5,18 @@ import { inventorydataPresset } from "@modules/inventory/Assets.module";
 import { Inventory } from "@modules/inventory/Core.class";
 import { RageShared } from "@shared/index";
 
+export async function spawnWithCharacter(player: PlayerMp, character: CharacterEntity) {
+    player.character = character;
+    player.setVariable("loggedin", true);
+    player.call("client::auth:destroyCamera");
+    player.call("client::cef:close");
+
+    player.model = character.gender === 0 ? mp.joaat("mp_m_freemode_01") : mp.joaat("mp_f_freemode_01");
+    player.name = character.name;
+    await character.spawn(player);
+    player.showNotify(RageShared.Enums.NotifyType.TYPE_SUCCESS, `Welcome, ${character.name}!`);
+}
+
 /**
  * When a player changes navigation in character creator, example going from general data to appearance
  */
@@ -17,7 +29,7 @@ RAGERP.cef.register("creator", "navigation", async (player: PlayerMp, name: stri
 });
 
 /**
- * Executed when a player selects a character to spawn with
+ * Executed when a player selects a character to spawn with (kept for compatibility)
  */
 RAGERP.cef.register("character", "select", async (player: PlayerMp, data: string) => {
     const id = JSON.parse(data);
@@ -25,17 +37,7 @@ RAGERP.cef.register("character", "select", async (player: PlayerMp, data: string
     const character = await RAGERP.database.getRepository(CharacterEntity).findOne({ where: { id }, relations: ["items", "bank"] });
     if (!character) return player.showNotify(RageShared.Enums.NotifyType.TYPE_ERROR, "An error occurred selecting your character.");
 
-    player.character = character;
-
-    player.setVariable("loggedin", true);
-    player.call("client::auth:destroyCamera");
-    player.call("client::cef:close");
-
-    player.model = character.gender === 0 ? mp.joaat("mp_m_freemode_01") : mp.joaat("mp_f_freemode_01");
-    player.name = player.character.name;
-    await player.character.spawn(player);
-
-    player.showNotify(RageShared.Enums.NotifyType.TYPE_SUCCESS, `Welcome, ${player.character.name}!`);
+    await spawnWithCharacter(player, character);
 });
 /**
  * Executes when a player choose to create a new character
@@ -59,9 +61,9 @@ RAGERP.cef.register("creator", "create", async (player, data) => {
     if (nameisTaken) return player.showNotify(RageShared.Enums.NotifyType.TYPE_ERROR, "We're sorry but that name is already taken, choose another one.");
     const { sex, parents, hair, face, color }: RageShared.Players.Interfaces.CreatorData = parseData;
 
-    const characterLimit = await RAGERP.database.getRepository(CharacterEntity).find({ where: { account: { id: player.account.id } }, take: 3 });
+    const characterLimit = await RAGERP.database.getRepository(CharacterEntity).find({ where: { account: { id: player.account.id } }, take: 1 });
 
-    if (characterLimit.length > 2) return player.showNotify(RageShared.Enums.NotifyType.TYPE_ERROR, "We're sorry but you already have three characters, you cannot create anymore.");
+    if (characterLimit.length >= 1) return player.showNotify(RageShared.Enums.NotifyType.TYPE_ERROR, "You already have a character. One character per account.");
 
     const characterData = new CharacterEntity();
     characterData.account = player.account;

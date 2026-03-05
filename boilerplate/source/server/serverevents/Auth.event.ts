@@ -3,6 +3,7 @@ import { RAGERP } from "@api";
 import { AccountEntity } from "@entities/Account.entity";
 import { CharacterEntity } from "@entities/Character.entity";
 import { RageShared } from "@shared/index";
+import { spawnWithCharacter } from "./Character.event";
 
 function hashPassword(text: string) {
     return crypto.createHash("sha256").update(text).digest("hex");
@@ -36,10 +37,9 @@ RAGERP.cef.register("auth", "register", async (player, data) => {
     player.account = result;
     player.name = player.account.username;
 
-    const characterData: RageShared.Players.Interfaces.ICharacters[] = Array.from({ length: 3 }, () => ({ id: -1, name: "", level: 0, money: 0, bank: 0, lastlogin: "", type: 0 }));
-
-    RAGERP.cef.emit(player, "player", "setCharacters", characterData);
-    RAGERP.cef.emit(player, "system", "setPage", "selectcharacter");
+    player.call("client::auth:destroyCamera");
+    player.call("client::creator:start");
+    RAGERP.cef.emit(player, "system", "setPage", "creator");
 });
 
 RAGERP.cef.register("auth", "loginPlayer", async (player, data) => {
@@ -53,14 +53,17 @@ RAGERP.cef.register("auth", "loginPlayer", async (player, data) => {
     player.account = accountData;
     player.name = player.account.username;
 
-    const characters = await RAGERP.database.getRepository(CharacterEntity).find({ where: { account: { id: accountData.id } }, take: 3 });
-    const characterData: RageShared.Players.Interfaces.ICharacters[] = Array.from({ length: 3 }, () => ({ id: -1, name: "", level: 0, money: 0, bank: 0, lastlogin: "", type: 0 }));
-
-    characters.forEach((x, idx) => {
-        const character = { id: x.id, type: 1, name: x.name, bank: 0, money: 0, level: x.level, lastlogin: ".." };
-        Object.assign(characterData[idx], character);
+    const characters = await RAGERP.database.getRepository(CharacterEntity).find({
+        where: { account: { id: accountData.id } },
+        relations: ["items", "bank"],
+        take: 1
     });
 
-    RAGERP.cef.emit(player, "player", "setCharacters", characterData);
-    RAGERP.cef.emit(player, "system", "setPage", "selectcharacter");
+    if (characters.length > 0) {
+        await spawnWithCharacter(player, characters[0]);
+    } else {
+        player.call("client::auth:destroyCamera");
+        player.call("client::creator:start");
+        RAGERP.cef.emit(player, "system", "setPage", "creator");
+    }
 });
