@@ -3920,6 +3920,126 @@ _api_1.RAGERP.commands.add({
 
 /***/ },
 
+/***/ "./source/server/commands/ArenaDev.commands.ts"
+/*!*****************************************************!*\
+  !*** ./source/server/commands/ArenaDev.commands.ts ***!
+  \*****************************************************/
+(__unused_webpack_module, exports, __webpack_require__) {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const _api_1 = __webpack_require__(/*! @api */ "./source/server/api/index.ts");
+const arenaMarkedPresets = new Map();
+const ADMIN_DEV = 6 /* RageShared.Enums.ADMIN_LEVELS.LEVEL_SIX */;
+_api_1.RAGERP.commands.add({
+    name: "pos",
+    description: "Print current position (x, y, z, heading, dimension)",
+    adminlevel: ADMIN_DEV,
+    run: (player) => {
+        const { x, y, z } = player.position;
+        const heading = player.heading;
+        const dim = player.dimension;
+        player.outputChatBox(`Position: x=${x.toFixed(2)} y=${y.toFixed(2)} z=${z.toFixed(2)} heading=${heading.toFixed(2)} dimension=${dim}`);
+        console.log(`[POS] ${player.name}: x=${x} y=${y} z=${z} heading=${heading} dimension=${dim}`);
+    }
+});
+_api_1.RAGERP.commands.add({
+    name: "tp",
+    description: "Teleport to x y z",
+    adminlevel: ADMIN_DEV,
+    run: (player, _fulltext, x, y, z) => {
+        if (!x || !y || !z)
+            return _api_1.RAGERP.chat.sendSyntaxError(player, "/tp <x> <y> <z>");
+        const px = parseFloat(x);
+        const py = parseFloat(y);
+        const pz = parseFloat(z);
+        if (isNaN(px) || isNaN(py) || isNaN(pz))
+            return player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "Invalid coordinates.");
+        player.position = new mp.Vector3(px, py, pz);
+        player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, `Teleported to ${px.toFixed(1)}, ${py.toFixed(1)}, ${pz.toFixed(1)}`);
+    }
+});
+_api_1.RAGERP.commands.add({
+    name: "setdim",
+    description: "Set dimension",
+    adminlevel: ADMIN_DEV,
+    run: (player, _fulltext, id) => {
+        if (!id)
+            return _api_1.RAGERP.chat.sendSyntaxError(player, "/setdim <id>");
+        const dim = parseInt(id, 10);
+        if (isNaN(dim) || dim < 0)
+            return player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "Invalid dimension ID.");
+        player.dimension = dim;
+        player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, `Dimension set to ${dim}`);
+    }
+});
+_api_1.RAGERP.commands.add({
+    name: "arena_mark",
+    description: "Mark a point for arena preset (center|redspawn|bluespawn|redcar|bluecar|safenode)",
+    adminlevel: ADMIN_DEV,
+    run: (player, _fulltext, presetId, markType) => {
+        if (!presetId || !markType)
+            return _api_1.RAGERP.chat.sendSyntaxError(player, "/arena_mark <presetId> <center|redspawn|bluespawn|redcar|bluecar|safenode>");
+        const type = markType.toLowerCase();
+        const valid = ["center", "redspawn", "bluespawn", "redcar", "bluecar", "safenode"];
+        if (!valid.includes(type))
+            return player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, `Invalid type. Use: ${valid.join(", ")}`);
+        let preset = arenaMarkedPresets.get(presetId);
+        if (!preset) {
+            preset = { safeNodes: [] };
+            arenaMarkedPresets.set(presetId, preset);
+        }
+        const { x, y, z } = player.position;
+        const heading = player.heading;
+        if (type === "safenode") {
+            preset.safeNodes = preset.safeNodes || [];
+            preset.safeNodes.push({ x, y, z });
+            player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, `[${presetId}] safenode #${preset.safeNodes.length} marked`);
+        }
+        else {
+            const point = { x, y, z, heading };
+            if (type === "center")
+                preset.center = point;
+            else if (type === "redspawn")
+                preset.redspawn = point;
+            else if (type === "bluespawn")
+                preset.bluespawn = point;
+            else if (type === "redcar")
+                preset.redcar = point;
+            else if (type === "bluecar")
+                preset.bluecar = point;
+            player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, `[${presetId}] ${type} marked`);
+        }
+    }
+});
+_api_1.RAGERP.commands.add({
+    name: "arena_export",
+    description: "Export arena preset as JSON",
+    adminlevel: ADMIN_DEV,
+    run: (player, _fulltext, presetId) => {
+        if (!presetId)
+            return _api_1.RAGERP.chat.sendSyntaxError(player, "/arena_export <presetId>");
+        const preset = arenaMarkedPresets.get(presetId);
+        if (!preset)
+            return player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, `No points marked for preset "${presetId}". Use /arena_mark first.`);
+        const exportObj = {
+            id: presetId,
+            center: preset.center,
+            redSpawn: preset.redspawn,
+            blueSpawn: preset.bluespawn,
+            redCar: preset.redcar,
+            blueCar: preset.bluecar,
+            safeNodes: preset.safeNodes && preset.safeNodes.length > 0 ? preset.safeNodes : undefined
+        };
+        const json = JSON.stringify(exportObj, null, 2);
+        console.log(`\n--- Arena preset: ${presetId} ---\n${json}\n---`);
+        player.outputChatBox(`${"!{#32cd32}" /* RageShared.Enums.STRINGCOLORS.GREEN */}[${presetId}] Exported. Check server console for JSON.`);
+    }
+});
+
+
+/***/ },
+
 /***/ "./source/server/commands/Dev.commands.ts"
 /*!************************************************!*\
   !*** ./source/server/commands/Dev.commands.ts ***!
@@ -4158,6 +4278,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 __webpack_require__(/*! ./Admin.commands */ "./source/server/commands/Admin.commands.ts");
 __webpack_require__(/*! ./Dev.commands */ "./source/server/commands/Dev.commands.ts");
 __webpack_require__(/*! ./Player.commands */ "./source/server/commands/Player.commands.ts");
+__webpack_require__(/*! ./ArenaDev.commands */ "./source/server/commands/ArenaDev.commands.ts");
 
 
 /***/ },
