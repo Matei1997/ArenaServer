@@ -12,6 +12,8 @@
 		"watch:both": "concurrently \"npm run watch:client\" \"npm run watch:server\"",
 		"watch:cef": "cd ./frontend && npm install && npm run start",
 		"build:cef": "cd ./frontend && npm install && npm run build",
+		"build:all": "npm run build:server && npm run build:client && npm run build:cef",
+		"deploy": "npm run build:all && node scripts/deploy.js",
 		"format-client": "prettier --config .prettierrc \"./source/client/**/*.ts\" --write",
 		"format-server": "prettier --config .prettierrc \"./source/server/**/*.ts\" --write"
 	},
