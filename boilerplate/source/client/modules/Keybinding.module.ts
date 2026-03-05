@@ -49,6 +49,20 @@ PlayerKeybind.addKeybind(
     "Restore cursor (F2)"
 );
 
+// Hold right-click in clothing menu to orbit camera and view character
+PlayerKeybind.addKeybind({ keyCode: 2, up: false }, () => {
+    if (Browser.currentPage === "wardrobe") {
+        Browser.wardrobeCameraHeld = true;
+        mp.gui.cursor.show(false, false);
+    }
+}, "Wardrobe camera hold");
+PlayerKeybind.addKeybind({ keyCode: 2, up: true }, () => {
+    if (Browser.currentPage === "wardrobe" && Browser.wardrobeCameraHeld) {
+        Browser.wardrobeCameraHeld = false;
+        mp.gui.cursor.show(true, true);
+    }
+}, "Wardrobe camera release");
+
 /**
  * Adds a keybind for toggling inventory fast slots.
  * @param keyCode - The key code for the keybind.

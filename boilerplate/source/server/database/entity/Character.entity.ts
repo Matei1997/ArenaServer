@@ -103,6 +103,10 @@ export class CharacterEntity {
         const { x, y, z, heading } = player.character.position;
 
         player.character.applyAppearance(player);
+        const clothes = (player.character.appearance as any).clothes;
+        if (clothes) {
+            player.call("client::wardrobe:applyClothes", [JSON.stringify(clothes)]);
+        }
         player.character.loadInventory(player);
 
         player.character.setStoreData(player, "ping", player.ping);

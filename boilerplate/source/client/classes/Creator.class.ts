@@ -10,6 +10,7 @@ type TCreatorCamera = Record<string, { coords: Vector3; fov: number; zpos: numbe
 
 const defaultClothes: RageShared.Players.Interfaces.CreatorClothes = {
     hats: { drawable: 0, texture: 0 },
+    masks: { drawable: 0, texture: 0 },
     tops: { drawable: 15, texture: 0 },
     pants: { drawable: 21, texture: 0 },
     shoes: { drawable: 34, texture: 0 }
@@ -52,6 +53,8 @@ class ModelCreator {
         mp.events.add("client::creator:start", this.setupCamera.bind(this));
         mp.events.add("client::creator:random", this.randomizer.bind(this));
         mp.events.add("client::creator:preview", this.previewChanges.bind(this));
+        mp.events.add("client::wardrobe:preview", this.previewChanges.bind(this));
+        mp.events.add("client::wardrobe:applyClothes", this.applyClothes.bind(this));
     }
 
     async setupCamera() {
@@ -206,15 +209,15 @@ class ModelCreator {
 
             const clothes = this.chosenData.clothes ?? defaultClothes;
             if (this.chosenData.sex === 0) {
-                mp.players.local.setComponentVariation(11, clothes.tops?.drawable ?? 15, clothes.tops?.texture ?? 0, 2);
                 mp.players.local.setComponentVariation(3, 15, 0, 2);
-                mp.players.local.setComponentVariation(8, 57, 0, 2);
+                mp.players.local.setComponentVariation(8, 15, 0, 2);
+                mp.players.local.setComponentVariation(11, clothes.tops?.drawable ?? 15, clothes.tops?.texture ?? 0, 2);
                 mp.players.local.setComponentVariation(4, clothes.pants?.drawable ?? 21, clothes.pants?.texture ?? 0, 2);
                 mp.players.local.setComponentVariation(6, clothes.shoes?.drawable ?? 34, clothes.shoes?.texture ?? 0, 2);
             } else {
-                mp.players.local.setComponentVariation(11, clothes.tops?.drawable ?? 15, clothes.tops?.texture ?? 0, 2);
                 mp.players.local.setComponentVariation(3, 15, 0, 2);
-                mp.players.local.setComponentVariation(8, -1, 0, 2);
+                mp.players.local.setComponentVariation(8, 0, 0, 2);
+                mp.players.local.setComponentVariation(11, clothes.tops?.drawable ?? 15, clothes.tops?.texture ?? 0, 2);
                 mp.players.local.setComponentVariation(4, clothes.pants?.drawable ?? 15, clothes.pants?.texture ?? 0, 2);
                 mp.players.local.setComponentVariation(6, clothes.shoes?.drawable ?? 35, clothes.shoes?.texture ?? 0, 2);
             }
@@ -324,7 +327,7 @@ class ModelCreator {
             }
             case "clothing": {
                 if (typeof firstData === "undefined" || typeof secondData === "undefined") return;
-                const type = firstData as "hats" | "tops" | "pants" | "shoes";
+                const type = firstData as "hats" | "masks" | "tops" | "pants" | "shoes";
                 const drawable = Number(secondData);
                 const texture = Number(typeof thirdData !== "undefined" ? thirdData : 0);
                 if (!this.chosenData.clothes) this.chosenData.clothes = { ...defaultClothes };
@@ -334,7 +337,12 @@ class ModelCreator {
                         mp.players.local.clearProp(0);
                         if (drawable > 0) mp.players.local.setPropIndex(0, drawable, texture, true);
                         break;
+                    case "masks":
+                        mp.players.local.setComponentVariation(1, drawable, texture, 0);
+                        break;
                     case "tops":
+                        mp.players.local.setComponentVariation(3, 15, 0, 0);
+                        mp.players.local.setComponentVariation(8, mp.players.local.model === mp.game.joaat("mp_f_freemode_01") ? 0 : 15, 0, 0);
                         mp.players.local.setComponentVariation(11, drawable, texture, 0);
                         break;
                     case "pants":
@@ -348,6 +356,23 @@ class ModelCreator {
             }
             default:
                 return;
+        }
+    }
+
+    applyClothes(clothesJson: string) {
+        const clothes = typeof clothesJson === "string" ? JSON.parse(clothesJson) : clothesJson;
+        if (!clothes) return;
+        const isFemale = mp.players.local.model === mp.game.joaat("mp_f_freemode_01");
+        // Set torso & undershirt first (order matters for clipping) - use compatible defaults
+        mp.players.local.setComponentVariation(3, 15, 0, 0);
+        mp.players.local.setComponentVariation(8, isFemale ? 0 : 15, 0, 0);
+        mp.players.local.setComponentVariation(11, clothes.tops?.drawable ?? 15, clothes.tops?.texture ?? 0, 0);
+        mp.players.local.setComponentVariation(1, clothes.masks?.drawable ?? 0, clothes.masks?.texture ?? 0, 0);
+        mp.players.local.setComponentVariation(4, clothes.pants?.drawable ?? (isFemale ? 15 : 21), clothes.pants?.texture ?? 0, 0);
+        mp.players.local.setComponentVariation(6, clothes.shoes?.drawable ?? (isFemale ? 35 : 34), clothes.shoes?.texture ?? 0, 0);
+        mp.players.local.clearProp(0);
+        if ((clothes.hats?.drawable ?? 0) > 0) {
+            mp.players.local.setPropIndex(0, clothes.hats.drawable, clothes.hats.texture, true);
         }
     }
     //#endregion

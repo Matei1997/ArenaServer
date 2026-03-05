@@ -27,6 +27,8 @@ import "@events/Inventory.event";
 import "@events/Death.event";
 import "@events/Vehicle.event";
 import "@events/Point.event";
+import "@events/Wardrobe.event";
+import "@events/MainMenu.event";
 //---------------------------------------//
 import { blue, green, yellow } from "colorette";
 import { v4 } from "uuid";

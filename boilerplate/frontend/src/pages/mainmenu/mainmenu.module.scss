@@ -1,0 +1,132 @@
+.mainmenu {
+    position: absolute;
+    width: 100vw;
+    height: 100vh;
+    background: url("../../assets/images/selector/bg.svg") no-repeat;
+    background-size: cover;
+    font-family: Arial, Helvetica, sans-serif;
+
+    &::before {
+        position: absolute;
+        content: "";
+        width: 100%;
+        height: 100%;
+        background: url("../../assets/images/selector/crazy.png") no-repeat;
+        background-size: cover;
+        opacity: 0.1;
+        z-index: -1;
+    }
+}
+
+.header {
+    position: relative;
+    top: 2vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Beast Duh";
+    flex-direction: column;
+    font-size: 3.7vh;
+    text-shadow: 0 0 5vh black;
+    color: white;
+
+    .desc {
+        font-size: 1.85vh;
+        font-family: Arial, Helvetica, sans-serif;
+        text-transform: uppercase;
+        opacity: 0.8;
+    }
+}
+
+.modes {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 12vh;
+    gap: 3vh;
+}
+
+.mode {
+    font-family: Arial, Helvetica, sans-serif;
+    border-radius: 0.5vh;
+    width: 32vh;
+    height: 55vh;
+    background: linear-gradient(45deg, #8b4646, transparent);
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    padding-bottom: 3vh;
+    cursor: pointer;
+    border: none;
+    color: white;
+    text-align: center;
+
+    &:hover {
+        width: 36vh;
+        background-color: rgba(0, 0, 0, 0.6);
+
+        .play {
+            opacity: 1;
+        }
+    }
+
+    &::before {
+        content: "";
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background: url("../../assets/images/selector/3.svg") no-repeat;
+        background-size: cover;
+        opacity: 0.3;
+        z-index: -1;
+        border-radius: 0.5vh;
+    }
+
+    .name {
+        position: relative;
+        font-size: 2.2vh;
+        font-weight: bold;
+        text-shadow: 0 0 1vh black;
+        text-transform: uppercase;
+        font-family: "Beast Duh";
+    }
+
+    .desc {
+        position: relative;
+        font-size: 1.4vh;
+        opacity: 0.85;
+        margin-top: 0.5vh;
+        padding: 0 1vh;
+    }
+
+    .play {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 2vh;
+        font-size: 2.5vh;
+        font-family: "Beast Duh";
+        background-color: #2d2f34;
+        padding: 1vh 2vh;
+        opacity: 0;
+        transition: opacity 0.2s ease-in;
+    }
+}
+
+.mode.arena {
+    background: linear-gradient(45deg, rgba(80, 80, 80, 0.6), transparent);
+    opacity: 0.7;
+
+    &:hover {
+        outline: 0.5vh solid rgba(255, 0, 0, 0.4);
+    }
+
+    .play {
+        opacity: 0.6;
+        font-size: 1.8vh;
+    }
+}

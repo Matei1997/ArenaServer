@@ -33,6 +33,9 @@ export namespace CefData {
                 setMaxWeight: number;
             };
             auth: {};
+            wardrobe: {
+                setClothes: { hats?: { drawable: number; texture: number }; masks?: { drawable: number; texture: number }; tops?: { drawable: number; texture: number }; pants?: { drawable: number; texture: number }; shoes?: { drawable: number; texture: number } };
+            };
         }
         export interface IncomingCEFEvents {
             inventory: {
@@ -66,6 +69,17 @@ export namespace CefData {
 
             hud: {
                 interactResult: (player: PlayerMp, type: string) => void;
+            };
+
+            wardrobe: {
+                open: (player: PlayerMp) => void;
+                save: (player: PlayerMp, data: string) => void;
+                close: (player: PlayerMp) => void;
+            };
+
+            mainmenu: {
+                playFreeroam: (player: PlayerMp) => void;
+                playArena: (player: PlayerMp) => void;
             };
         }
     }

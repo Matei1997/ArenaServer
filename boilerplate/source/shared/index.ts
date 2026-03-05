@@ -221,7 +221,8 @@ export namespace RageShared {
                 FACTION = 2,
                 RENTAL = 3,
                 JOB = 4,
-                ADMIN = 5
+                ADMIN = 5,
+                FREEROAM = 6
             }
 
             export const enum VEHICLE_CLASS {
@@ -449,6 +450,7 @@ export namespace RageShared {
 
             export interface CreatorClothes {
                 hats: CreatorClothesSlot;
+                masks?: CreatorClothesSlot;
                 tops: CreatorClothesSlot;
                 pants: CreatorClothesSlot;
                 shoes: CreatorClothesSlot;

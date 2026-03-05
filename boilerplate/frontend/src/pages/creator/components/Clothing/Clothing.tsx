@@ -5,37 +5,42 @@ import EventManager from "utils/EventManager.util";
 import style from "./clothing.module.scss";
 import { creatorStore } from "store/CharCreator.store";
 
-type ClothingType = "hats" | "tops" | "pants" | "shoes";
+type ClothingType = "hats" | "masks" | "tops" | "pants" | "shoes";
 
-const CreatorPlayerClothes: FC<{ store: typeof creatorStore }> = ({ store }) => {
+interface ClothingStore {
+  data: { clothes: Record<ClothingType, { drawable: number; texture: number }> };
+}
+
+const CreatorPlayerClothes: FC<{ store: ClothingStore; eventPrefix?: "creator" | "wardrobe"; compact?: boolean }> = ({ store, eventPrefix = "creator", compact = false }) => {
   const [clothingType, setClothingType] = useState<ClothingType>("hats");
 
   const sendClothingData = useCallback(
     (type: ClothingType, drawable: number, texture: number) => {
-      EventManager.emitClient("creator", "preview", "clothing", type, drawable, texture);
+      EventManager.emitClient(eventPrefix, "preview", "clothing", type, drawable, texture);
     },
-    []
+    [eventPrefix]
   );
 
   useEffect(() => {
-    (["hats", "tops", "pants", "shoes"] as ClothingType[]).forEach((cat) => {
+    (["hats", "masks", "tops", "pants", "shoes"] as ClothingType[]).forEach((cat) => {
       const opt = store.data.clothes[cat];
       sendClothingData(cat, opt.drawable, opt.texture);
     });
   }, [sendClothingData]);
 
   const clothingCategories = useMemo<ClothingType[]>(
-    () => ["hats", "tops", "pants", "shoes"],
+    () => ["hats", "masks", "tops", "pants", "shoes"],
     []
   );
 
-  // Max values (these are just UI limits)
+  // Max values - GTA V freemode has 250+ tops, 100+ pants/shoes, etc.
   const limits = useMemo(
     () => ({
-      hats: { maxDrawable: 20, maxTexture: 10 },
-      tops: { maxDrawable: 50, maxTexture: 15 },
-      pants: { maxDrawable: 20, maxTexture: 10 },
-      shoes: { maxDrawable: 15, maxTexture: 8 },
+      hats: { maxDrawable: 150, maxTexture: 20 },
+      masks: { maxDrawable: 200, maxTexture: 20 },
+      tops: { maxDrawable: 250, maxTexture: 25 },
+      pants: { maxDrawable: 100, maxTexture: 20 },
+      shoes: { maxDrawable: 100, maxTexture: 15 },
     }),
     []
   );
@@ -44,7 +49,7 @@ const CreatorPlayerClothes: FC<{ store: typeof creatorStore }> = ({ store }) => 
   const current = store.data.clothes[clothingType];
 
   return (
-    <div className={style.appearance}>
+    <div className={cn(style.appearance, compact && style.compact)}>
       <div className={style.navigation}>
         {clothingCategories.map((category, index) => (
           <div key={index}>

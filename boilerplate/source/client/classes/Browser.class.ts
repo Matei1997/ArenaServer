@@ -12,6 +12,8 @@ class _Browser {
     private readonly url: string = "http://package2/dist/index.html";
     mainUI: BrowserMp;
     currentPage: string | undefined;
+    /** When true (right-click held in wardrobe), hide cursor to allow camera orbit */
+    wardrobeCameraHeld: boolean = false;
 
     /**
      * Initializes the browser and sets up event handlers.
@@ -45,7 +47,7 @@ class _Browser {
      */
     onTick() {
         mp.game.controls.applyDisableControlActionBatch();
-        if (this.currentPage) {
+        if (this.currentPage && !(this.currentPage === "wardrobe" && this.wardrobeCameraHeld)) {
             mp.gui.cursor.show(true, true);
         }
     }
@@ -94,6 +96,7 @@ class _Browser {
 
         const pageData = CEFPages[page];
         this.currentPage = undefined;
+        this.wardrobeCameraHeld = false;
 
         mp.events.callRemote("server::player:closeCEF", page);
         if (pageData.blur) {
