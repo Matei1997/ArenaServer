@@ -9273,6 +9273,7 @@ const crypto_1 = __importDefault(__webpack_require__(/*! crypto */ "crypto"));
 const _api_1 = __webpack_require__(/*! @api */ "./source/server/api/index.ts");
 const Account_entity_1 = __webpack_require__(/*! @entities/Account.entity */ "./source/server/database/entity/Account.entity.ts");
 const Character_entity_1 = __webpack_require__(/*! @entities/Character.entity */ "./source/server/database/entity/Character.entity.ts");
+const Character_event_1 = __webpack_require__(/*! ./Character.event */ "./source/server/serverevents/Character.event.ts");
 function hashPassword(text) {
     return crypto_1.default.createHash("sha256").update(text).digest("hex");
 }
@@ -9300,9 +9301,9 @@ _api_1.RAGERP.cef.register("auth", "register", async (player, data) => {
     }
     player.account = result;
     player.name = player.account.username;
-    const characterData = Array.from({ length: 3 }, () => ({ id: -1, name: "", level: 0, money: 0, bank: 0, lastlogin: "", type: 0 }));
-    _api_1.RAGERP.cef.emit(player, "player", "setCharacters", characterData);
-    _api_1.RAGERP.cef.emit(player, "system", "setPage", "selectcharacter");
+    player.call("client::auth:destroyCamera");
+    player.call("client::creator:start");
+    _api_1.RAGERP.cef.emit(player, "system", "setPage", "creator");
 });
 _api_1.RAGERP.cef.register("auth", "loginPlayer", async (player, data) => {
     const { username, password } = _api_1.RAGERP.utils.parseObject(data);
@@ -9313,14 +9314,19 @@ _api_1.RAGERP.cef.register("auth", "loginPlayer", async (player, data) => {
         return player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "Wrong password.");
     player.account = accountData;
     player.name = player.account.username;
-    const characters = await _api_1.RAGERP.database.getRepository(Character_entity_1.CharacterEntity).find({ where: { account: { id: accountData.id } }, take: 3 });
-    const characterData = Array.from({ length: 3 }, () => ({ id: -1, name: "", level: 0, money: 0, bank: 0, lastlogin: "", type: 0 }));
-    characters.forEach((x, idx) => {
-        const character = { id: x.id, type: 1, name: x.name, bank: 0, money: 0, level: x.level, lastlogin: ".." };
-        Object.assign(characterData[idx], character);
+    const characters = await _api_1.RAGERP.database.getRepository(Character_entity_1.CharacterEntity).find({
+        where: { account: { id: accountData.id } },
+        relations: ["items", "bank"],
+        take: 1
     });
-    _api_1.RAGERP.cef.emit(player, "player", "setCharacters", characterData);
-    _api_1.RAGERP.cef.emit(player, "system", "setPage", "selectcharacter");
+    if (characters.length > 0) {
+        await (0, Character_event_1.spawnWithCharacter)(player, characters[0]);
+    }
+    else {
+        player.call("client::auth:destroyCamera");
+        player.call("client::creator:start");
+        _api_1.RAGERP.cef.emit(player, "system", "setPage", "creator");
+    }
 });
 
 
@@ -9334,11 +9340,22 @@ _api_1.RAGERP.cef.register("auth", "loginPlayer", async (player, data) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.spawnWithCharacter = spawnWithCharacter;
 const _api_1 = __webpack_require__(/*! @api */ "./source/server/api/index.ts");
 const Character_entity_1 = __webpack_require__(/*! @entities/Character.entity */ "./source/server/database/entity/Character.entity.ts");
 const Inventory_entity_1 = __webpack_require__(/*! @entities/Inventory.entity */ "./source/server/database/entity/Inventory.entity.ts");
 const Assets_module_1 = __webpack_require__(/*! @modules/inventory/Assets.module */ "./source/server/modules/inventory/Assets.module.ts");
 const Core_class_1 = __webpack_require__(/*! @modules/inventory/Core.class */ "./source/server/modules/inventory/Core.class.ts");
+async function spawnWithCharacter(player, character) {
+    player.character = character;
+    player.setVariable("loggedin", true);
+    player.call("client::auth:destroyCamera");
+    player.call("client::cef:close");
+    player.model = character.gender === 0 ? mp.joaat("mp_m_freemode_01") : mp.joaat("mp_f_freemode_01");
+    player.name = character.name;
+    await character.spawn(player);
+    player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, `Welcome, ${character.name}!`);
+}
 /**
  * When a player changes navigation in character creator, example going from general data to appearance
  */
@@ -9349,21 +9366,14 @@ _api_1.RAGERP.cef.register("creator", "navigation", async (player, name) => {
     player.call("client::creator:changeCategory", [cameraName]);
 });
 /**
- * Executed when a player selects a character to spawn with
+ * Executed when a player selects a character to spawn with (kept for compatibility)
  */
 _api_1.RAGERP.cef.register("character", "select", async (player, data) => {
     const id = JSON.parse(data);
     const character = await _api_1.RAGERP.database.getRepository(Character_entity_1.CharacterEntity).findOne({ where: { id }, relations: ["items", "bank"] });
     if (!character)
         return player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "An error occurred selecting your character.");
-    player.character = character;
-    player.setVariable("loggedin", true);
-    player.call("client::auth:destroyCamera");
-    player.call("client::cef:close");
-    player.model = character.gender === 0 ? mp.joaat("mp_m_freemode_01") : mp.joaat("mp_f_freemode_01");
-    player.name = player.character.name;
-    await player.character.spawn(player);
-    player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, `Welcome, ${player.character.name}!`);
+    await spawnWithCharacter(player, character);
 });
 /**
  * Executes when a player choose to create a new character
@@ -9385,9 +9395,9 @@ _api_1.RAGERP.cef.register("creator", "create", async (player, data) => {
     if (nameisTaken)
         return player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "We're sorry but that name is already taken, choose another one.");
     const { sex, parents, hair, face, color } = parseData;
-    const characterLimit = await _api_1.RAGERP.database.getRepository(Character_entity_1.CharacterEntity).find({ where: { account: { id: player.account.id } }, take: 3 });
-    if (characterLimit.length > 2)
-        return player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "We're sorry but you already have three characters, you cannot create anymore.");
+    const characterLimit = await _api_1.RAGERP.database.getRepository(Character_entity_1.CharacterEntity).find({ where: { account: { id: player.account.id } }, take: 1 });
+    if (characterLimit.length >= 1)
+        return player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "You already have a character. One character per account.");
     const characterData = new Character_entity_1.CharacterEntity();
     characterData.account = player.account;
     characterData.appearance = { color, face, hair, parents };
