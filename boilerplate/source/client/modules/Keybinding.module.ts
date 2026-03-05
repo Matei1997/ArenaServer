@@ -41,6 +41,14 @@ function playerPressEscape() {
 
 PlayerKeybind.addKeybind({ keyCode: 27, up: false }, playerPressEscape, "Close Pages");
 
+PlayerKeybind.addKeybind(
+    { keyCode: 113, up: false },
+    () => {
+        if (Browser.currentPage) mp.gui.cursor.show(true, true);
+    },
+    "Restore cursor (F2)"
+);
+
 /**
  * Adds a keybind for toggling inventory fast slots.
  * @param keyCode - The key code for the keybind.

@@ -41,9 +41,13 @@ class _Browser {
 
     /**
      * Called every frame to apply disable control actions.
+     * Re-applies cursor when CEF is open (fixes cursor disappearing after alt-tab).
      */
     onTick() {
         mp.game.controls.applyDisableControlActionBatch();
+        if (this.currentPage) {
+            mp.gui.cursor.show(true, true);
+        }
     }
 
     /**

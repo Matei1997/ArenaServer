@@ -45,11 +45,11 @@ RAGERP.commands.add({
 });
 
 RAGERP.commands.add({
-    name: "setdim",
-    description: "Set dimension",
+    name: "mydim",
+    description: "Set your own dimension (setdim is admin command for others)",
     adminlevel: ADMIN_DEV,
     run: (player: PlayerMp, _fulltext: string, id: string) => {
-        if (!id) return RAGERP.chat.sendSyntaxError(player, "/setdim <id>");
+        if (!id) return RAGERP.chat.sendSyntaxError(player, "/mydim <id>");
         const dim = parseInt(id, 10);
         if (isNaN(dim) || dim < 0) return player.showNotify(RageShared.Enums.NotifyType.TYPE_ERROR, "Invalid dimension ID.");
         player.dimension = dim;
