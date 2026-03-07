@@ -119,32 +119,38 @@ const MainMenu: React.FC = observer(() => {
 
             {activeNav === "play" && (
                 <main className={style.mainContent}>
-                    <div className={style.modeTabs}>
-                        {GAME_MODES.map((mode) => (
-                            <button
-                                key={mode.id}
-                                className={cn(style.modeTab, gameMode === mode.id && style.modeTabActive)}
-                                onClick={() => setGameMode(mode.id)}
-                            >
-                                <mode.Icon className={style.modeTabIcon} />
-                                {mode.label}
-                            </button>
-                        ))}
-                    </div>
-
-                    {gameMode === "hopouts" && (
-                        <div className={style.sizeTabs}>
-                            {HOP_OUT_SIZES.map((size) => (
+                    <aside className={style.modeColumn}>
+                        <div className={style.modeList}>
+                            {GAME_MODES.map((mode) => (
                                 <button
-                                    key={size}
-                                    className={cn(style.sizeTab, queueSize === size && style.sizeTabActive)}
-                                    onClick={() => setQueueSize(size)}
+                                    key={mode.id}
+                                    className={cn(style.modeCard, gameMode === mode.id && style.modeCardActive)}
+                                    onClick={() => setGameMode(mode.id)}
                                 >
-                                    {size}v{size}
+                                    <div className={style.modeThumb} />
+                                    <div className={style.modeMeta}>
+                                        <span className={style.modeName}>{mode.label}</span>
+                                        <span className={style.modeHint}>PVP PLAYLIST</span>
+                                    </div>
                                 </button>
                             ))}
                         </div>
-                    )}
+
+                        {gameMode === "hopouts" && (
+                            <div className={style.sizeList}>
+                                {HOP_OUT_SIZES.map((size) => (
+                                    <button
+                                        key={size}
+                                        className={cn(style.sizeCard, queueSize === size && style.sizeCardActive)}
+                                        onClick={() => setQueueSize(size)}
+                                    >
+                                        <div className={style.sizeLabel}>{size}V{size}</div>
+                                        <div className={style.sizeSub}>HOP OUTS</div>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </aside>
 
                     <div className={style.mapGrid}>
                         {mapOptions.map((map) => (
