@@ -1,54 +1,68 @@
+@import "../../styles/vars";
+
 .main {
-    position: absolute;
-    width: 100vw;
-    height: 100vh;
-
-    background: url('../../assets/images/selector/bg.svg') no-repeat;
-    background-size: cover;
-    font-family: Arial, Helvetica, sans-serif;
-
-    transition: all .2s;
-
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 2, 6, 0.45);
+    font-family: $global-font;
     z-index: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 
     &::before {
         position: absolute;
         content: "";
         width: 100%;
         height: 100%;
-        background: url('../../assets/images/auth/chars.png') no-repeat;
-        background-size: cover;
-        opacity: .2;
-        margin-left: -25vh;
-        z-index: -1;
-        animation: slide-right 0.5s forwards;
-
-        @keyframes slide-right {
-            0% {
-                transform: translateX(-100vh);
-            }
-
-            100% {
-                transform: translateX(100px);
-            }
-        }
+        background: radial-gradient(ellipse at 30% 50%, rgba(48, 25, 52, 0.3) 0%, transparent 60%),
+                    radial-gradient(ellipse at 70% 80%, rgba(89, 27, 135, 0.15) 0%, transparent 50%);
+        z-index: 0;
     }
 
     .authform {
-        position: absolute;
-
-        right: 10vh;
-        width: 50vh;
-        height: 100%;
-
+        position: relative;
+        z-index: 1;
+        width: 44vh;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        // background-color: #3a3a3a;
-        border-radius: .6vh;
-        // box-shadow: 0px 0px 20px 0px black;
+        padding: 5vh 4vh;
+        background: rgba(10, 10, 14, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 1.2vh;
+        backdrop-filter: blur(20px);
+        box-shadow: 0 0 8vh rgba(48, 25, 52, 0.2);
+        animation: fadeIn 0.4s ease-out;
 
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(2vh); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        &::before {
+            content: "ARENA";
+            display: block;
+            font-size: 4vh;
+            font-weight: bold;
+            letter-spacing: 0.5em;
+            margin-bottom: 1vh;
+            background: linear-gradient(90deg, #fff, rgba(255, 255, 255, 0.6));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        &::after {
+            content: "";
+            display: block;
+            width: 6vh;
+            height: 0.3vh;
+            background: linear-gradient(90deg, #301934, #591b87);
+            border-radius: 1vh;
+            margin-bottom: 3vh;
+            box-shadow: 0 0 1vh rgba(89, 27, 135, 0.5);
+        }
 
         .content {
             display: flex;
@@ -56,77 +70,233 @@
             justify-content: center;
             flex-direction: column;
             gap: 2vh;
-
-
-
+            width: 100%;
 
             input {
-                font-family: Arial, Helvetica, sans-serif;
+                font-family: $global-font;
                 outline: none;
                 border: none;
-                font-size: 17px;
-
-                border-bottom: .1vh solid red;
-                background: linear-gradient(to left, #1e1b20, transparent);
-                width: 30vh;
+                font-size: 1.6vh;
+                background: rgba(255, 255, 255, 0.04);
+                border-left: 3px solid rgba(48, 25, 52, 0.6);
+                width: 100%;
                 height: 5vh;
-                padding: .5vh;
-                color: white;
+                padding: 0 1.5vh;
+                color: #fff;
+                border-radius: 0.6vh;
+                transition: all 0.2s;
+                box-sizing: border-box;
+
+                &::placeholder {
+                    color: rgba(255, 255, 255, 0.3);
+                    text-transform: uppercase;
+                    font-size: 1.3vh;
+                    letter-spacing: 0.1em;
+                }
+
+                &:focus {
+                    border-left-color: #591b87;
+                    background: rgba(255, 255, 255, 0.07);
+                    box-shadow: 0 0 2vh rgba(89, 27, 135, 0.15);
+                }
             }
-
-
 
             .submit {
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                color: white;
-                gap: .5vh;
+                color: #fff;
+                gap: 1vh;
+                background: linear-gradient(180deg, rgba(71, 44, 132, 0.3) 0%, rgba(75, 0, 130, 0.3) 100%);
+                border: 1px solid rgba(48, 25, 52, 0.6);
+                border-radius: 0.8vh;
+                width: 100%;
+                height: 5vh;
+                font-family: $global-font;
+                font-size: 1.8vh;
+                letter-spacing: 0.15em;
+                text-transform: uppercase;
+                cursor: pointer;
+                transition: all 0.2s;
 
-                background: #28272b;
-                border-radius: .5vh;
+                &:hover {
+                    background: linear-gradient(180deg, rgba(71, 44, 132, 0.5) 0%, rgba(75, 0, 130, 0.5) 100%);
+                    border-color: #591b87;
+                    box-shadow: 0 0 3vh rgba(89, 27, 135, 0.3);
+                }
 
-                border: none;
-
-                width: 25vh;
-                height: 4.5vh;
-
-                font-family: 'Beast Duh';
-                font-size: 3vh;
-
-                text-shadow: 0vh 0vh 5vh black;
-            }
-
-            input.usernameInput {
-
-                &::before {
-                    content: "";
-                    position: absolute;
-                    background: url("../../assets/images/auth/username.svg");
-                    width: 1em;
-                    height: 1em;
-
+                img {
+                    width: 1.8vh;
+                    height: 1.8vh;
+                    filter: brightness(2);
                 }
             }
-
         }
 
         .footer {
             display: flex;
             flex-direction: column;
-
             align-items: center;
             justify-content: center;
-            gap: .2vh;
-
+            gap: 0.5vh;
             position: relative;
-            font-family: Arial, Helvetica, sans-serif;
+            margin-top: 3vh;
+            font-size: 1.3vh;
+            color: rgba(255, 255, 255, 0.4);
             text-transform: uppercase;
-            margin-top: 2vh;
+            letter-spacing: 0.1em;
 
+            span {
+                color: #591b87;
+                cursor: pointer;
+                transition: color 0.2s;
 
-            font-size: 15px;
-
+                &:hover {
+                    color: #7b3fa0;
+                    text-shadow: 0 0 1vh rgba(89, 27, 135, 0.4);
+                }
+            }
         }
     }
+}
+
+.navBar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 7.5vh;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 3.5vh;
+    background: rgba(4, 4, 5, 0.85);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid $hud-border;
+    z-index: 2;
+}
+
+.logo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1vh;
+
+    .logoMain {
+        font-size: 2vh;
+        font-weight: 700;
+        color: $hud-text;
+        letter-spacing: 0.25em;
+    }
+
+    .logoSub {
+        font-size: 0.9vh;
+        font-weight: 500;
+        color: $accent-light;
+        letter-spacing: 0.15em;
+    }
+}
+
+.navRight {
+    display: flex;
+    align-items: center;
+}
+
+.navHint {
+    font-size: 1.1vh;
+    letter-spacing: 0.2em;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.authLayout {
+    position: absolute;
+    inset: 0;
+    padding: 12vh 4vh 4vh;
+    display: grid;
+    grid-template-columns: 1fr 34vh;
+    gap: 3vh;
+    z-index: 1;
+}
+
+.leftCol {
+    display: flex;
+    flex-direction: column;
+    gap: 3vh;
+    max-width: 60vh;
+}
+
+.rightCol {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.welcome {
+    display: flex;
+    flex-direction: column;
+    gap: 1vh;
+    max-width: 52vh;
+}
+
+.welcomeTitle {
+    font-size: 3.6vh;
+    font-weight: 700;
+    letter-spacing: 0.4em;
+    color: $hud-text;
+}
+
+.welcomeSubtitle {
+    font-size: 1.2vh;
+    letter-spacing: 0.2em;
+    color: $accent-light;
+}
+
+.welcomeText {
+    font-size: 1.3vh;
+    line-height: 1.6;
+    color: $hud-text-muted;
+    margin: 0;
+}
+
+.profileCard {
+    width: 100%;
+    padding: 2vh;
+    background: rgba(10, 10, 14, 0.92);
+    backdrop-filter: blur(16px);
+    border: 1px solid $hud-border;
+    border-radius: 1.4vh;
+    display: flex;
+    flex-direction: column;
+    gap: 1vh;
+}
+
+.profileTitle {
+    font-size: 1.1vh;
+    letter-spacing: 0.15em;
+    color: $hud-text-muted;
+}
+
+.profileName {
+    font-size: 1.8vh;
+    font-weight: 700;
+    color: $hud-text;
+}
+
+.profileRank {
+    font-size: 1.1vh;
+    color: $accent-light;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+}
+
+.profileStats {
+    font-size: 1.1vh;
+    color: $hud-text-muted;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4vh;
+}
+
+.profileFooter {
+    margin-top: auto;
+    font-size: 1.1vh;
+    color: rgba(255, 255, 255, 0.45);
 }

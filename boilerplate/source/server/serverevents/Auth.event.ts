@@ -61,6 +61,9 @@ RAGERP.cef.register("auth", "loginPlayer", async (player, data) => {
 
     if (characters.length > 0) {
         await spawnWithCharacter(player, characters[0]);
+        RAGERP.cef.startPage(player, "mainmenu");
+        RAGERP.cef.emit(player, "system", "setPage", "mainmenu");
+        RAGERP.cef.emit(player, "mainmenu", "setPlayerData", { name: characters[0].name });
     } else {
         player.call("client::auth:destroyCamera");
         player.call("client::creator:start");

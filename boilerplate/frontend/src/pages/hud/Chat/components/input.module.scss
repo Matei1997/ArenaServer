@@ -1,45 +1,41 @@
 .chatinput {
     width: 90%;
     margin: 0.462963vh 0 0 0.2vh;
-
-    font-family: Arial, Helvetica, sans-serif;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
 
     .box {
         width: 100%;
-        padding: 0.6481481481481481vh 1.3888888888888888vh;
-
+        padding: 0.6vh 1.2vh;
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        gap: 0.8vh;
 
-        background-color: rgba(0, 0, 0, .5);
+        background: linear-gradient(135deg, rgba(20, 22, 28, 0.92) 0%, rgba(28, 30, 38, 0.88) 100%);
         opacity: 1;
-
-        transition: width .4s ease, opacity .2s;
-        border-radius: 0.46296296296296297vh;
-        filter: drop-shadow(0 0 1vh black);
+        transition: width 0.4s ease, opacity 0.2s;
+        border-radius: 0.6vh;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 
         img {
-            width: 2.5vh;
-            height: 2.5vh;
-            transition: opacity ease-in .5s;
+            width: 2.2vh;
+            height: 2.2vh;
+            opacity: 0.85;
+            flex-shrink: 0;
         }
 
         .input {
-            width: 100%;
+            flex: 1;
+            min-width: 0;
             border: none;
             outline: none;
             background: none;
-
-
-            color: #fff;
-            font-family: Arial,
-                Helvetica,
-                sans-serif;
-            font-size: 1.574074074074074vh;
+            color: #f1f5f9;
+            font-size: 1.5vh;
+            font-family: inherit;
 
             &::placeholder {
-                color: #FFFFFF90;
+                color: rgba(255, 255, 255, 0.45);
             }
         }
     }

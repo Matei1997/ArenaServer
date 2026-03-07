@@ -35,6 +35,9 @@ export class PlayerHud {
         const maxammo = mp.game.weapon.getAmmoInPed(handle, weapon) - weaponAmmo;
         const weaponName = weaponList[weapon];
         this.setPlayerData("weapondata", { weapon: weaponName, ammo: weaponAmmo, maxammo: maxammo });
+
+        this.setPlayerData("health", mp.players.local.health);
+        this.setPlayerData("armour", mp.players.local.armour);
     }
 
     /**

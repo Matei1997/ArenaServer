@@ -138,6 +138,1402 @@ var RAGERP;
 
 /***/ },
 
+/***/ "./source/server/arena/Arena.module.ts"
+/*!*********************************************!*\
+  !*** ./source/server/arena/Arena.module.ts ***!
+  \*********************************************/
+(__unused_webpack_module, exports, __webpack_require__) {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.joinQueue = joinQueue;
+exports.leaveQueue = leaveQueue;
+exports.vote = vote;
+exports.getLobbyState = getLobbyState;
+exports.startSoloMatch = startSoloMatch;
+const _api_1 = __webpack_require__(/*! @api */ "./source/server/api/index.ts");
+const ArenaPresets_asset_1 = __webpack_require__(/*! ./ArenaPresets.asset */ "./source/server/arena/ArenaPresets.asset.ts");
+const ArenaMatch_manager_1 = __webpack_require__(/*! ./ArenaMatch.manager */ "./source/server/arena/ArenaMatch.manager.ts");
+const ArenaConfig_1 = __webpack_require__(/*! ./ArenaConfig */ "./source/server/arena/ArenaConfig.ts");
+__webpack_require__(/*! ./WeaponPresets.service */ "./source/server/arena/WeaponPresets.service.ts");
+const LOBBY_COUNTDOWN_SEC = 15;
+const VOTING_DURATION_SEC = 30;
+const queues = new Map();
+let nextDimension = 1000;
+ArenaConfig_1.QUEUE_SIZES.forEach((size) => {
+    queues.set(size, {
+        size,
+        queue: [],
+        lobbyPlayers: new Map(),
+        lobbyState: "waiting",
+        countdownInterval: null,
+        votingInterval: null,
+        voteMaps: [],
+        voteEndsAt: 0
+    });
+});
+function getPlayerQueue(player) {
+    for (const q of queues.values()) {
+        if (q.queue.some((p) => p.id === player.id))
+            return q;
+    }
+    return null;
+}
+function emitLobbyToAll(q) {
+    const baseData = {
+        state: q.lobbyState,
+        queueSize: q.size,
+        players: Array.from(q.lobbyPlayers.values()).map((p) => ({
+            id: p.player.id,
+            name: p.player.name,
+            ready: p.ready
+        })),
+        countdown: 0,
+        voteMaps: q.voteMaps.map((m) => ({ id: m.preset.id, name: m.preset.name, votes: m.votes })),
+        voteEndsAt: q.voteEndsAt
+    };
+    if ((q.lobbyState === "waiting" && q.countdownInterval) || q.lobbyState === "voting") {
+        baseData.countdown = Math.max(0, Math.ceil((q.voteEndsAt - Date.now()) / 1000));
+    }
+    const event = q.lobbyState === "voting" ? "setVoting" : "setLobby";
+    q.queue.forEach((p) => {
+        if (mp.players.exists(p)) {
+            const lp = q.lobbyPlayers.get(p.id);
+            const data = { ...baseData, myVote: lp?.voteMapId ?? null };
+            _api_1.RAGERP.cef.emit(p, "arena", event, data);
+        }
+    });
+}
+function startCountdown(q) {
+    if (q.lobbyState !== "waiting" || q.countdownInterval)
+        return;
+    q.voteEndsAt = Date.now() + LOBBY_COUNTDOWN_SEC * 1000;
+    q.countdownInterval = setInterval(() => {
+        const remaining = Math.ceil((q.voteEndsAt - Date.now()) / 1000);
+        emitLobbyToAll(q);
+        if (remaining <= 0) {
+            if (q.countdownInterval)
+                clearInterval(q.countdownInterval);
+            q.countdownInterval = null;
+            startVoting(q);
+        }
+    }, 1000);
+    emitLobbyToAll(q);
+}
+function startVoting(q) {
+    q.lobbyState = "voting";
+    const presets = (0, ArenaPresets_asset_1.getArenaPresets)();
+    const preferredIds = new Set();
+    q.lobbyPlayers.forEach((lp) => {
+        if (lp.preferredMapId)
+            preferredIds.add(lp.preferredMapId);
+    });
+    let candidates = presets.filter((p) => preferredIds.has(p.id));
+    if (candidates.length >= 3) {
+        candidates = [...candidates].sort(() => Math.random() - 0.5).slice(0, 3);
+    }
+    else {
+        const remaining = presets.filter((p) => !preferredIds.has(p.id));
+        const shuffled = remaining.sort(() => Math.random() - 0.5);
+        candidates = candidates.concat(shuffled.slice(0, 3 - candidates.length));
+    }
+    q.voteMaps = candidates.map((p) => ({ preset: p, votes: 0 }));
+    q.voteEndsAt = Date.now() + VOTING_DURATION_SEC * 1000;
+    q.lobbyPlayers.forEach((lp) => {
+        lp.voteMapId = null;
+        if (lp.preferredMapId && q.voteMaps.some((m) => m.preset.id === lp.preferredMapId)) {
+            lp.voteMapId = lp.preferredMapId;
+        }
+    });
+    q.lobbyPlayers.forEach((lp) => {
+        if (!lp.voteMapId)
+            return;
+        const map = q.voteMaps.find((m) => m.preset.id === lp.voteMapId);
+        if (map)
+            map.votes++;
+    });
+    q.queue.forEach((p) => {
+        if (mp.players.exists(p)) {
+            _api_1.RAGERP.cef.emit(p, "system", "setPage", "arena_voting");
+        }
+    });
+    if (q.votingInterval)
+        clearInterval(q.votingInterval);
+    q.votingInterval = setInterval(() => {
+        const remaining = Math.ceil((q.voteEndsAt - Date.now()) / 1000);
+        emitLobbyToAll(q);
+        if (remaining <= 0) {
+            if (q.votingInterval)
+                clearInterval(q.votingInterval);
+            q.votingInterval = null;
+            launchMatch(q);
+        }
+    }, 1000);
+    emitLobbyToAll(q);
+}
+function launchMatch(q) {
+    q.lobbyState = "starting";
+    if (q.voteMaps.length === 0) {
+        q.queue.forEach((p) => p.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "No arena locations available."));
+        resetQueue(q);
+        return;
+    }
+    let winner;
+    const maxVotes = Math.max(...q.voteMaps.map((m) => m.votes), 0);
+    const tied = q.voteMaps.filter((m) => m.votes === maxVotes);
+    winner = tied.length > 1 || maxVotes === 0
+        ? tied[Math.floor(Math.random() * tied.length)]?.preset ?? q.voteMaps[0].preset
+        : q.voteMaps.find((m) => m.votes === maxVotes)?.preset ?? q.voteMaps[0].preset;
+    const players = Array.from(q.lobbyPlayers.values()).map((lp) => lp.player);
+    const dim = nextDimension++;
+    const redTeam = [];
+    const blueTeam = [];
+    players.forEach((p, i) => {
+        if (i % 2 === 0)
+            redTeam.push(p);
+        else
+            blueTeam.push(p);
+    });
+    (0, ArenaMatch_manager_1.startMatch)(dim, winner, redTeam, blueTeam);
+    const matchData = {
+        mapId: winner.id,
+        mapName: winner.name,
+        queueSize: q.size,
+        redTeam: redTeam.map((p) => ({ id: p.id, name: p.name })),
+        blueTeam: blueTeam.map((p) => ({ id: p.id, name: p.name })),
+        dimension: dim,
+        redScore: 0,
+        blueScore: 0,
+        currentRound: 1,
+        roundsToWin: ArenaConfig_1.ARENA_CONFIG.roundsToWin,
+        timeLeft: ArenaConfig_1.ARENA_CONFIG.maxRoundTime
+    };
+    [...redTeam, ...blueTeam].forEach((p) => {
+        if (mp.players.exists(p)) {
+            _api_1.RAGERP.cef.emit(p, "arena", "setMatch", matchData);
+            _api_1.RAGERP.cef.startPage(p, "arena_hud");
+            _api_1.RAGERP.cef.emit(p, "system", "setPage", "arena_hud");
+        }
+    });
+    redTeam.forEach((p) => {
+        if (mp.players.exists(p))
+            p.call("client::arena:setTeam", ["red"]);
+    });
+    blueTeam.forEach((p) => {
+        if (mp.players.exists(p))
+            p.call("client::arena:setTeam", ["blue"]);
+    });
+    resetQueue(q);
+}
+function resetQueue(q) {
+    q.queue = [];
+    q.lobbyPlayers.clear();
+    q.lobbyState = "waiting";
+    q.voteMaps = [];
+    q.voteEndsAt = 0;
+}
+function joinQueue(player, size = 2, preferredMapId) {
+    if (!player.character) {
+        player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "No character loaded.");
+        return false;
+    }
+    if ((0, ArenaMatch_manager_1.isPlayerInArenaMatch)(player)) {
+        player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "Already in a match.");
+        return false;
+    }
+    if (getPlayerQueue(player)) {
+        player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "Already in a queue.");
+        return false;
+    }
+    const q = queues.get(size);
+    if (!q) {
+        player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "Invalid queue size.");
+        return false;
+    }
+    q.queue.push(player);
+    q.lobbyPlayers.set(player.id, { player, ready: false, voteMapId: null, preferredMapId: preferredMapId ?? null });
+    const neededPlayers = size * 2;
+    if (q.queue.length >= neededPlayers && !q.countdownInterval) {
+        startCountdown(q);
+    }
+    else {
+        const data = {
+            state: "waiting",
+            queueSize: q.size,
+            players: Array.from(q.lobbyPlayers.values()).map((p) => ({ id: p.player.id, name: p.player.name, ready: p.ready })),
+            countdown: 0,
+            voteMaps: [],
+            voteEndsAt: 0,
+            myVote: null
+        };
+        _api_1.RAGERP.cef.emit(player, "arena", "setLobby", data);
+    }
+    emitLobbyToAll(q);
+    return true;
+}
+function leaveQueue(player) {
+    const q = getPlayerQueue(player);
+    if (!q)
+        return false;
+    const idx = q.queue.findIndex((p) => p.id === player.id);
+    if (idx < 0)
+        return false;
+    q.queue.splice(idx, 1);
+    q.lobbyPlayers.delete(player.id);
+    const neededPlayers = q.size * 2;
+    if (q.queue.length < neededPlayers && q.countdownInterval) {
+        clearInterval(q.countdownInterval);
+        q.countdownInterval = null;
+    }
+    emitLobbyToAll(q);
+    return true;
+}
+function vote(player, mapId) {
+    const q = getPlayerQueue(player);
+    if (!q || q.lobbyState !== "voting")
+        return false;
+    const lp = q.lobbyPlayers.get(player.id);
+    if (!lp)
+        return false;
+    const map = q.voteMaps.find((m) => m.preset.id === mapId);
+    if (!map)
+        return false;
+    if (lp.voteMapId) {
+        const prev = q.voteMaps.find((m) => m.preset.id === lp.voteMapId);
+        if (prev)
+            prev.votes--;
+    }
+    lp.voteMapId = mapId;
+    map.votes++;
+    emitLobbyToAll(q);
+    return true;
+}
+function getLobbyState(size) {
+    const q = queues.get(size);
+    if (!q)
+        return { state: "waiting", playerCount: 0 };
+    return { state: q.lobbyState, playerCount: q.queue.length };
+}
+function startSoloMatch(player, presetId) {
+    if ((0, ArenaMatch_manager_1.isPlayerInArenaMatch)(player))
+        return false;
+    const presets = (0, ArenaPresets_asset_1.getArenaPresets)();
+    if (presets.length === 0)
+        return false;
+    const preset = presetId ? presets.find((p) => p.id === presetId) : presets[0];
+    if (!preset)
+        return false;
+    const dim = nextDimension++;
+    (0, ArenaMatch_manager_1.startMatch)(dim, preset, [player], []);
+    const matchData = {
+        mapId: preset.id,
+        mapName: preset.name,
+        queueSize: 2,
+        redTeam: [{ id: player.id, name: player.name }],
+        blueTeam: [],
+        dimension: dim,
+        redScore: 0,
+        blueScore: 0,
+        currentRound: 1,
+        roundsToWin: ArenaConfig_1.ARENA_CONFIG.roundsToWin,
+        timeLeft: ArenaConfig_1.ARENA_CONFIG.maxRoundTime
+    };
+    _api_1.RAGERP.cef.emit(player, "arena", "setMatch", matchData);
+    _api_1.RAGERP.cef.startPage(player, "arena_hud");
+    _api_1.RAGERP.cef.emit(player, "system", "setPage", "arena_hud");
+    player.call("client::arena:setTeam", ["red"]);
+    return true;
+}
+
+
+/***/ },
+
+/***/ "./source/server/arena/ArenaConfig.ts"
+/*!********************************************!*\
+  !*** ./source/server/arena/ArenaConfig.ts ***!
+  \********************************************/
+(__unused_webpack_module, exports, __webpack_require__) {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ARENA_AMMO = exports.ITEM_CONFIG = exports.ZONE_PHASES = exports.VEHICLE_POOL = exports.WEAPON_ROTATION = exports.QUEUE_SIZES = exports.ARENA_CONFIG = void 0;
+const Weapons_assets_1 = __webpack_require__(/*! @assets/Weapons.assets */ "./source/server/assets/Weapons.assets.ts");
+exports.ARENA_CONFIG = {
+    roundsToWin: 7,
+    warmupDuration: 5, // seconds before round starts
+    roundEndDelay: 4, // seconds between rounds
+    matchEndDelay: 8, // seconds before returning to lobby
+    startHealth: 100,
+    startArmor: 100,
+    maxRoundTime: 180, // 3 min per round max (zone should end it before)
+};
+exports.QUEUE_SIZES = [2, 3, 4, 5];
+exports.WEAPON_ROTATION = [
+    { name: "Pistol .50", weapons: [Weapons_assets_1.weaponHash.pistol50] },
+    { name: "Service Carbine + .50", weapons: [Weapons_assets_1.weaponHash.specialcarbine, Weapons_assets_1.weaponHash.pistol50] },
+    { name: "Bullpup + .50", weapons: [Weapons_assets_1.weaponHash.bullpuprifle, Weapons_assets_1.weaponHash.pistol50] },
+    { name: "Carbine MK II + .50", weapons: [Weapons_assets_1.weaponHash.carbinerifle_mk2, Weapons_assets_1.weaponHash.pistol50] },
+    { name: "Pump Shotgun + .50", weapons: [Weapons_assets_1.weaponHash.pumpshotgun, Weapons_assets_1.weaponHash.pistol50] },
+    { name: "Heavy Rifle + .50", weapons: [Weapons_assets_1.weaponHash.assaultrifle, Weapons_assets_1.weaponHash.pistol50] },
+];
+exports.VEHICLE_POOL = [
+    "sultan", "banshee", "drafter", "omnis", "kuruma", "revolter", "buffalo"
+];
+exports.ZONE_PHASES = [
+    { duration: 60, endRadius: 160, dps: 1 },
+    { duration: 50, endRadius: 110, dps: 2 },
+    { duration: 45, endRadius: 70, dps: 4 },
+    { duration: 40, endRadius: 35, dps: 7 },
+    { duration: 30, endRadius: 10, dps: 10 },
+];
+exports.ITEM_CONFIG = {
+    medkit: { castTime: 3000, heal: 60, maxHp: 100, countPerRound: 3 },
+    plate: { castTime: 2000, armor: 25, maxArmor: 100, countPerRound: 5 },
+};
+exports.ARENA_AMMO = 999;
+
+
+/***/ },
+
+/***/ "./source/server/arena/ArenaMatch.manager.ts"
+/*!***************************************************!*\
+  !*** ./source/server/arena/ArenaMatch.manager.ts ***!
+  \***************************************************/
+(__unused_webpack_module, exports, __webpack_require__) {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getMatchByDimension = getMatchByDimension;
+exports.getMatchByPlayer = getMatchByPlayer;
+exports.isPlayerInArenaMatch = isPlayerInArenaMatch;
+exports.getTeam = getTeam;
+exports.startMatch = startMatch;
+exports.handleArenaDeath = handleArenaDeath;
+exports.handleZoneDeath = handleZoneDeath;
+exports.leaveMatch = leaveMatch;
+exports.endMatch = endMatch;
+exports.tickMatches = tickMatches;
+const _api_1 = __webpack_require__(/*! @api */ "./source/server/api/index.ts");
+const ArenaConfig_1 = __webpack_require__(/*! ./ArenaConfig */ "./source/server/arena/ArenaConfig.ts");
+const ZoneSystem_1 = __webpack_require__(/*! ./ZoneSystem */ "./source/server/arena/ZoneSystem.ts");
+const ItemsSystem_1 = __webpack_require__(/*! ./ItemsSystem */ "./source/server/arena/ItemsSystem.ts");
+const WeaponPresets_service_1 = __webpack_require__(/*! ./WeaponPresets.service */ "./source/server/arena/WeaponPresets.service.ts");
+const activeMatches = new Map();
+const playerToMatch = new Map();
+function getMatchByDimension(dim) {
+    return activeMatches.get(dim);
+}
+function getMatchByPlayer(player) {
+    const dim = playerToMatch.get(player.id);
+    return dim !== undefined ? activeMatches.get(dim) : undefined;
+}
+function isPlayerInArenaMatch(player) {
+    return playerToMatch.has(player.id);
+}
+function getTeam(match, playerId) {
+    if (match.redTeam.some((p) => p.id === playerId))
+        return "red";
+    if (match.blueTeam.some((p) => p.id === playerId))
+        return "blue";
+    return null;
+}
+function getTeamPlayers(match, team) {
+    return team === "red" ? match.redTeam : match.blueTeam;
+}
+function getAlivePlayers(match, team) {
+    return getTeamPlayers(match, team).filter((p) => p.alive);
+}
+function getWeaponsForRound(round) {
+    const idx = (round - 1) % ArenaConfig_1.WEAPON_ROTATION.length;
+    return ArenaConfig_1.WEAPON_ROTATION[idx].weapons;
+}
+function getWeaponRoundName(round) {
+    const idx = (round - 1) % ArenaConfig_1.WEAPON_ROTATION.length;
+    return ArenaConfig_1.WEAPON_ROTATION[idx].name;
+}
+function getZoneCenter(preset) {
+    const safe = preset.safeNodes;
+    if (safe && safe.length > 0) {
+        return safe[Math.floor(Math.random() * safe.length)];
+    }
+    return preset.center;
+}
+function giveRoundWeapons(player, round) {
+    player.removeAllWeapons();
+    player.call("client::recoil:reset");
+    const weapons = getWeaponsForRound(round);
+    setTimeout(() => {
+        if (!mp.players.exists(player))
+            return;
+        weapons.forEach((hash) => {
+            player.giveWeaponEx(hash, ArenaConfig_1.ARENA_AMMO, 30);
+        });
+        setTimeout(() => {
+            if (!mp.players.exists(player))
+                return;
+            (0, WeaponPresets_service_1.applyWeaponPresets)(player, weapons);
+        }, 300);
+    }, 500);
+}
+function randomVehicleModel() {
+    return ArenaConfig_1.VEHICLE_POOL[Math.floor(Math.random() * ArenaConfig_1.VEHICLE_POOL.length)];
+}
+function spawnTeamVehicles(match, team, spawnPoint) {
+    const players = getTeamPlayers(match, team);
+    const vehicleCount = Math.ceil(players.length / 2);
+    for (let i = 0; i < vehicleCount; i++) {
+        const model = randomVehicleModel();
+        const offset = i * 6;
+        const heading = spawnPoint.heading ?? 0;
+        const rad = (heading * Math.PI) / 180;
+        const vx = spawnPoint.x + Math.sin(rad) * offset;
+        const vy = spawnPoint.y + Math.cos(rad) * offset;
+        try {
+            const veh = mp.vehicles.new(mp.joaat(model), new mp.Vector3(vx, vy, spawnPoint.z), {
+                heading,
+                dimension: match.dimension,
+                locked: false,
+                engine: true
+            });
+            match.vehicles.push(veh);
+        }
+        catch (e) {
+            console.error(`[Arena] Failed to spawn vehicle ${model}:`, e);
+        }
+    }
+}
+function destroyMatchVehicles(match) {
+    match.vehicles.forEach((veh) => {
+        try {
+            if (mp.vehicles.exists(veh))
+                veh.destroy();
+        }
+        catch { /* ignore */ }
+    });
+    match.vehicles = [];
+}
+function getAllMatchPlayerMps(match) {
+    const ids = [...match.redTeam, ...match.blueTeam].map((p) => p.id);
+    const result = [];
+    ids.forEach((id) => {
+        const p = mp.players.at(id);
+        if (p && mp.players.exists(p))
+            result.push(p);
+    });
+    return result;
+}
+function emitToAll(match, event, data) {
+    getAllMatchPlayerMps(match).forEach((p) => {
+        _api_1.RAGERP.cef.emit(p, "arena", event, data);
+    });
+}
+function buildMatchUpdate(match) {
+    const timeLeft = match.state === "active"
+        ? Math.max(0, Math.ceil((match.roundEndsAt - Date.now()) / 1000))
+        : 0;
+    return {
+        state: match.state,
+        redScore: match.redScore,
+        blueScore: match.blueScore,
+        currentRound: match.currentRound,
+        roundsToWin: ArenaConfig_1.ARENA_CONFIG.roundsToWin,
+        weaponName: getWeaponRoundName(match.currentRound),
+        redAlive: getAlivePlayers(match, "red").length,
+        blueAlive: getAlivePlayers(match, "blue").length,
+        redTeam: match.redTeam.map((p) => ({
+            id: p.id, name: p.name, kills: p.kills, deaths: p.deaths, alive: p.alive
+        })),
+        blueTeam: match.blueTeam.map((p) => ({
+            id: p.id, name: p.name, kills: p.kills, deaths: p.deaths, alive: p.alive
+        })),
+        timeLeft
+    };
+}
+function emitMatchUpdate(match) {
+    emitToAll(match, "matchUpdate", buildMatchUpdate(match));
+}
+function emitKillFeed(match, killerName, victimName) {
+    emitToAll(match, "killFeed", { killer: killerName, victim: victimName });
+}
+function spawnPlayerAtArena(player, spawn, dimension) {
+    player.dimension = dimension;
+    player.spawn(new mp.Vector3(spawn.x, spawn.y, spawn.z));
+    player.heading = spawn.heading ?? 0;
+    player.health = 100 + ArenaConfig_1.ARENA_CONFIG.startHealth;
+    player.armour = ArenaConfig_1.ARENA_CONFIG.startArmor;
+    player.call("client::arena:requestCollision", [spawn.x, spawn.y, spawn.z]);
+}
+function resetPlayerArenaState(player) {
+    player.call("client::spectate:stop");
+    player.setVariable("isSpectating", false);
+    player.setVariable("isDead", false);
+    if (player.character) {
+        player.character.deathState = 0 /* RageShared.Players.Enums.DEATH_STATES.STATE_NONE */;
+        player.character.setStoreData(player, "isDead", false);
+    }
+    player.setOwnVariable("deathAnim", null);
+    player.stopScreenEffect("DeathFailMPIn");
+}
+function startMatch(dimension, preset, redTeam, blueTeam) {
+    const match = {
+        dimension,
+        mapId: preset.id,
+        mapName: preset.name,
+        state: "warmup",
+        redTeam: redTeam.map((p) => ({ id: p.id, name: p.name, alive: true, kills: 0, deaths: 0 })),
+        blueTeam: blueTeam.map((p) => ({ id: p.id, name: p.name, alive: true, kills: 0, deaths: 0 })),
+        redScore: 0,
+        blueScore: 0,
+        currentRound: 1,
+        matchEndsAt: 0,
+        roundEndsAt: 0,
+        preset,
+        vehicles: []
+    };
+    activeMatches.set(dimension, match);
+    [...redTeam, ...blueTeam].forEach((p) => playerToMatch.set(p.id, dimension));
+    beginRound(match);
+}
+function beginRound(match) {
+    match.state = "warmup";
+    destroyMatchVehicles(match);
+    match.redTeam.forEach((p) => (p.alive = true));
+    match.blueTeam.forEach((p) => (p.alive = true));
+    const redSpawn = match.preset.redSpawn;
+    const blueSpawn = match.preset.blueSpawn;
+    match.redTeam.forEach((mp_) => {
+        const p = mp.players.at(mp_.id);
+        if (p && mp.players.exists(p)) {
+            resetPlayerArenaState(p);
+            spawnPlayerAtArena(p, redSpawn, match.dimension);
+            p.call("client::player:freeze", [true]);
+            giveRoundWeapons(p, match.currentRound);
+            p.call("client::arena:setTeam", ["red"]);
+        }
+    });
+    match.blueTeam.forEach((mp_) => {
+        const p = mp.players.at(mp_.id);
+        if (p && mp.players.exists(p)) {
+            resetPlayerArenaState(p);
+            spawnPlayerAtArena(p, blueSpawn, match.dimension);
+            p.call("client::player:freeze", [true]);
+            giveRoundWeapons(p, match.currentRound);
+            p.call("client::arena:setTeam", ["blue"]);
+        }
+    });
+    spawnTeamVehicles(match, "red", match.preset.redCar);
+    spawnTeamVehicles(match, "blue", match.preset.blueCar);
+    [...match.redTeam, ...match.blueTeam].forEach((mp_) => (0, ItemsSystem_1.initPlayerItems)(mp_.id));
+    emitToAll(match, "roundStart", {
+        round: match.currentRound,
+        weaponName: getWeaponRoundName(match.currentRound),
+        warmupTime: ArenaConfig_1.ARENA_CONFIG.warmupDuration,
+        redScore: match.redScore,
+        blueScore: match.blueScore,
+        roundsToWin: ArenaConfig_1.ARENA_CONFIG.roundsToWin
+    });
+    emitMatchUpdate(match);
+    const zoneCenter = getZoneCenter(match.preset);
+    match.zoneCenter = zoneCenter;
+    getAllMatchPlayerMps(match).forEach((p) => {
+        p.call("client::arena:zoneInit", [
+            zoneCenter.x,
+            zoneCenter.y,
+            200
+        ]);
+    });
+    (0, ZoneSystem_1.startZone)(match.dimension, zoneCenter.x, zoneCenter.y);
+    setTimeout(() => {
+        if (!activeMatches.has(match.dimension))
+            return;
+        match.state = "active";
+        match.roundEndsAt = Date.now() + ArenaConfig_1.ARENA_CONFIG.maxRoundTime * 1000;
+        getAllMatchPlayerMps(match).forEach((p) => {
+            p.call("client::player:freeze", [false]);
+        });
+        const center = match.zoneCenter ?? match.preset.center;
+        emitMatchUpdate(match);
+    }, ArenaConfig_1.ARENA_CONFIG.warmupDuration * 1000);
+}
+function checkRoundEnd(match) {
+    if (match.state !== "active")
+        return;
+    const redAlive = getAlivePlayers(match, "red").length;
+    const blueAlive = getAlivePlayers(match, "blue").length;
+    if (redAlive > 0 && blueAlive > 0)
+        return;
+    let roundWinner;
+    if (redAlive === 0 && blueAlive === 0) {
+        roundWinner = "draw";
+    }
+    else if (redAlive === 0) {
+        roundWinner = "blue";
+        match.blueScore++;
+    }
+    else {
+        roundWinner = "red";
+        match.redScore++;
+    }
+    match.state = "round_end";
+    (0, ZoneSystem_1.stopZone)(match.dimension);
+    getAllMatchPlayerMps(match).forEach((p) => {
+        p.call("client::arena:zoneClear");
+    });
+    emitToAll(match, "roundEnd", {
+        winner: roundWinner,
+        redScore: match.redScore,
+        blueScore: match.blueScore,
+        round: match.currentRound,
+        roundsToWin: ArenaConfig_1.ARENA_CONFIG.roundsToWin
+    });
+    if (match.redScore >= ArenaConfig_1.ARENA_CONFIG.roundsToWin || match.blueScore >= ArenaConfig_1.ARENA_CONFIG.roundsToWin) {
+        setTimeout(() => endMatch(match.dimension), ArenaConfig_1.ARENA_CONFIG.roundEndDelay * 1000);
+    }
+    else {
+        setTimeout(() => {
+            if (!activeMatches.has(match.dimension))
+                return;
+            match.currentRound++;
+            beginRound(match);
+        }, ArenaConfig_1.ARENA_CONFIG.roundEndDelay * 1000);
+    }
+}
+function handleArenaDeath(victim, killer) {
+    const match = getMatchByPlayer(victim);
+    if (!match || match.state !== "active")
+        return false;
+    const victimTeam = getTeam(match, victim.id);
+    if (!victimTeam)
+        return false;
+    const victimData = [...match.redTeam, ...match.blueTeam].find((p) => p.id === victim.id);
+    if (!victimData)
+        return false;
+    victimData.alive = false;
+    victimData.deaths++;
+    (0, ItemsSystem_1.cancelCast)(victim.id);
+    (0, ItemsSystem_1.clearPlayerItems)(victim.id);
+    victim.spawn(victim.position);
+    victim.health = 200;
+    resetPlayerArenaState(victim);
+    victim.removeAllWeapons();
+    let killerName = "";
+    if (killer && mp.players.exists(killer)) {
+        const killerTeam = getTeam(match, killer.id);
+        if (killerTeam && killerTeam !== victimTeam) {
+            const killerData = [...match.redTeam, ...match.blueTeam].find((p) => p.id === killer.id);
+            if (killerData)
+                killerData.kills++;
+            killerName = killer.name;
+            emitKillFeed(match, killer.name, victim.name);
+            _api_1.RAGERP.cef.emit(killer, "arena", "youKill", { victim: victim.name });
+        }
+    }
+    _api_1.RAGERP.cef.emit(victim, "arena", "youDied", { killer: killerName });
+    const aliveTeammates = getAlivePlayers(match, victimTeam);
+    if (aliveTeammates.length > 0) {
+        const target = aliveTeammates[0];
+        const targetMp = mp.players.at(target.id);
+        if (targetMp && mp.players.exists(targetMp)) {
+            victim.setVariable("isSpectating", true);
+            victim.position = new mp.Vector3(targetMp.position.x, targetMp.position.y, targetMp.position.z - 15);
+            victim.call("client::spectate:start", [target.id]);
+        }
+    }
+    emitMatchUpdate(match);
+    checkRoundEnd(match);
+    return true;
+}
+function handleZoneDeath(player) {
+    handleArenaDeath(player, undefined);
+}
+function leaveMatch(player, returnToMenu = true) {
+    const match = getMatchByPlayer(player);
+    if (!match)
+        return false;
+    playerToMatch.delete(player.id);
+    (0, ItemsSystem_1.cancelCast)(player.id);
+    (0, ItemsSystem_1.clearPlayerItems)(player.id);
+    player.dimension = 0;
+    player.removeAllWeapons();
+    player.call("client::player:freeze", [false]);
+    player.call("client::spectate:stop");
+    player.call("client::arena:zoneClear");
+    player.setVariable("isSpectating", false);
+    match.redTeam = match.redTeam.filter((p) => p.id !== player.id);
+    match.blueTeam = match.blueTeam.filter((p) => p.id !== player.id);
+    const remaining = [...match.redTeam, ...match.blueTeam];
+    if (remaining.length === 0) {
+        destroyMatchVehicles(match);
+        (0, ZoneSystem_1.stopZone)(match.dimension);
+        activeMatches.delete(match.dimension);
+    }
+    else {
+        emitMatchUpdate(match);
+        if (match.state === "active")
+            checkRoundEnd(match);
+    }
+    player.call("client::arena:clearTeam");
+    if (returnToMenu) {
+        _api_1.RAGERP.cef.startPage(player, "mainmenu");
+        _api_1.RAGERP.cef.emit(player, "system", "setPage", "mainmenu");
+    }
+    return true;
+}
+function endMatch(dimension) {
+    const match = activeMatches.get(dimension);
+    if (!match)
+        return;
+    match.state = "match_end";
+    (0, ZoneSystem_1.stopZone)(match.dimension);
+    destroyMatchVehicles(match);
+    const winner = match.redScore > match.blueScore ? "red" : match.blueScore > match.redScore ? "blue" : "draw";
+    const results = {
+        redScore: match.redScore,
+        blueScore: match.blueScore,
+        winner,
+        redTeam: match.redTeam.map((p) => ({ id: p.id, name: p.name, kills: p.kills, deaths: p.deaths })),
+        blueTeam: match.blueTeam.map((p) => ({ id: p.id, name: p.name, kills: p.kills, deaths: p.deaths }))
+    };
+    const allPlayers = getAllMatchPlayerMps(match);
+    allPlayers.forEach((p) => {
+        playerToMatch.delete(p.id);
+        (0, ItemsSystem_1.cancelCast)(p.id);
+        (0, ItemsSystem_1.clearPlayerItems)(p.id);
+        p.removeAllWeapons();
+        p.call("client::player:freeze", [false]);
+        p.call("client::spectate:stop");
+        p.call("client::arena:zoneClear");
+        p.setVariable("isSpectating", false);
+        _api_1.RAGERP.cef.emit(p, "arena", "matchEnd", results);
+    });
+    activeMatches.delete(dimension);
+    setTimeout(() => {
+        allPlayers.forEach((p) => {
+            if (mp.players.exists(p)) {
+                p.dimension = 0;
+                p.call("client::arena:clearTeam");
+                _api_1.RAGERP.cef.startPage(p, "mainmenu");
+                _api_1.RAGERP.cef.emit(p, "system", "setPage", "mainmenu");
+            }
+        });
+    }, ArenaConfig_1.ARENA_CONFIG.matchEndDelay * 1000);
+}
+function tickMatches() {
+    const now = Date.now();
+    activeMatches.forEach((match, dim) => {
+        if (match.state === "active" && now >= match.roundEndsAt) {
+            const redAlive = getAlivePlayers(match, "red").length;
+            const blueAlive = getAlivePlayers(match, "blue").length;
+            if (redAlive > blueAlive)
+                match.redScore++;
+            else if (blueAlive > redAlive)
+                match.blueScore++;
+            match.state = "round_end";
+            (0, ZoneSystem_1.stopZone)(dim);
+            getAllMatchPlayerMps(match).forEach((p) => {
+                p.call("client::arena:zoneClear");
+            });
+            emitToAll(match, "roundEnd", {
+                winner: redAlive > blueAlive ? "red" : blueAlive > redAlive ? "blue" : "draw",
+                redScore: match.redScore,
+                blueScore: match.blueScore,
+                round: match.currentRound,
+                roundsToWin: ArenaConfig_1.ARENA_CONFIG.roundsToWin
+            });
+            if (match.redScore >= ArenaConfig_1.ARENA_CONFIG.roundsToWin || match.blueScore >= ArenaConfig_1.ARENA_CONFIG.roundsToWin) {
+                setTimeout(() => endMatch(dim), ArenaConfig_1.ARENA_CONFIG.roundEndDelay * 1000);
+            }
+            else {
+                setTimeout(() => {
+                    if (!activeMatches.has(dim))
+                        return;
+                    match.currentRound++;
+                    beginRound(match);
+                }, ArenaConfig_1.ARENA_CONFIG.roundEndDelay * 1000);
+            }
+        }
+        else if (match.state === "active") {
+            emitMatchUpdate(match);
+        }
+    });
+}
+setInterval(tickMatches, 1000);
+
+
+/***/ },
+
+/***/ "./source/server/arena/ArenaPresets.asset.ts"
+/*!***************************************************!*\
+  !*** ./source/server/arena/ArenaPresets.asset.ts ***!
+  \***************************************************/
+(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getArenaPresets = getArenaPresets;
+exports.saveArenaPreset = saveArenaPreset;
+const fs = __importStar(__webpack_require__(/*! fs */ "fs"));
+const path = __importStar(__webpack_require__(/*! path */ "path"));
+const DATA_PATH = path.join(process.cwd(), "data", "arenas.json");
+let presets = [];
+function ensureDataDir() {
+    const dir = path.dirname(DATA_PATH);
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
+}
+function loadPresets() {
+    try {
+        ensureDataDir();
+        if (fs.existsSync(DATA_PATH)) {
+            const raw = fs.readFileSync(DATA_PATH, "utf-8");
+            const parsed = JSON.parse(raw);
+            presets = Array.isArray(parsed) ? parsed : [];
+        }
+        else {
+            presets = [];
+            fs.writeFileSync(DATA_PATH, JSON.stringify([], null, 2), "utf-8");
+        }
+    }
+    catch (err) {
+        console.error("[Hopouts] Failed to load locations:", err);
+        presets = [];
+    }
+    return presets;
+}
+function getArenaPresets() {
+    if (presets.length === 0) {
+        loadPresets();
+    }
+    return presets;
+}
+function saveArenaPreset(preset) {
+    try {
+        ensureDataDir();
+        const all = getArenaPresets();
+        const idx = all.findIndex((p) => p.id === preset.id);
+        if (idx >= 0) {
+            all[idx] = preset;
+        }
+        else {
+            all.push(preset);
+        }
+        fs.writeFileSync(DATA_PATH, JSON.stringify(all, null, 2), "utf-8");
+        presets = all;
+        return true;
+    }
+    catch (err) {
+        console.error("[Hopouts] Failed to save location:", err);
+        return false;
+    }
+}
+loadPresets();
+
+
+/***/ },
+
+/***/ "./source/server/arena/ItemsSystem.ts"
+/*!********************************************!*\
+  !*** ./source/server/arena/ItemsSystem.ts ***!
+  \********************************************/
+(__unused_webpack_module, exports, __webpack_require__) {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.initPlayerItems = initPlayerItems;
+exports.clearPlayerItems = clearPlayerItems;
+exports.cancelCast = cancelCast;
+exports.useItem = useItem;
+const _api_1 = __webpack_require__(/*! @api */ "./source/server/api/index.ts");
+const ArenaConfig_1 = __webpack_require__(/*! ./ArenaConfig */ "./source/server/arena/ArenaConfig.ts");
+const ArenaMatch_manager_1 = __webpack_require__(/*! ./ArenaMatch.manager */ "./source/server/arena/ArenaMatch.manager.ts");
+const playerItems = new Map();
+function initPlayerItems(playerId) {
+    playerItems.set(playerId, {
+        medkits: ArenaConfig_1.ITEM_CONFIG.medkit.countPerRound,
+        plates: ArenaConfig_1.ITEM_CONFIG.plate.countPerRound,
+        casting: false,
+        castTimeout: null
+    });
+    emitItemCounts(playerId);
+}
+function clearPlayerItems(playerId) {
+    const state = playerItems.get(playerId);
+    if (state?.castTimeout)
+        clearTimeout(state.castTimeout);
+    playerItems.delete(playerId);
+}
+function cancelCast(playerId) {
+    const state = playerItems.get(playerId);
+    if (!state)
+        return;
+    if (state.castTimeout) {
+        clearTimeout(state.castTimeout);
+        state.castTimeout = null;
+    }
+    state.casting = false;
+    const p = mp.players.at(playerId);
+    if (p && mp.players.exists(p)) {
+        _api_1.RAGERP.cef.emit(p, "arena", "itemCastCancel", {});
+    }
+}
+function emitItemCounts(playerId) {
+    const state = playerItems.get(playerId);
+    if (!state)
+        return;
+    const p = mp.players.at(playerId);
+    if (!p || !mp.players.exists(p))
+        return;
+    _api_1.RAGERP.cef.emit(p, "arena", "itemCounts", {
+        medkits: state.medkits,
+        plates: state.plates
+    });
+}
+function useItem(player, itemType) {
+    const match = (0, ArenaMatch_manager_1.getMatchByPlayer)(player);
+    if (!match || match.state !== "active")
+        return;
+    const state = playerItems.get(player.id);
+    if (!state)
+        return;
+    if (state.casting) {
+        player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "Already using an item.");
+        return;
+    }
+    const count = itemType === "medkit" ? state.medkits : state.plates;
+    if (count <= 0) {
+        player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, `No ${itemType}s remaining.`);
+        return;
+    }
+    if (itemType === "medkit" && player.health >= 100 + ArenaConfig_1.ITEM_CONFIG.medkit.maxHp) {
+        player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "Health is already full.");
+        return;
+    }
+    if (itemType === "plate" && player.armour >= ArenaConfig_1.ITEM_CONFIG.plate.maxArmor) {
+        player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "Armor is already full.");
+        return;
+    }
+    const castTime = itemType === "medkit" ? ArenaConfig_1.ITEM_CONFIG.medkit.castTime : ArenaConfig_1.ITEM_CONFIG.plate.castTime;
+    state.casting = true;
+    _api_1.RAGERP.cef.emit(player, "arena", "itemCastStart", {
+        item: itemType,
+        castTime
+    });
+    state.castTimeout = setTimeout(() => {
+        state.casting = false;
+        state.castTimeout = null;
+        if (!mp.players.exists(player))
+            return;
+        const currentMatch = (0, ArenaMatch_manager_1.getMatchByPlayer)(player);
+        if (!currentMatch || currentMatch.state !== "active")
+            return;
+        if (itemType === "medkit") {
+            state.medkits--;
+            const newHp = Math.min(100 + ArenaConfig_1.ITEM_CONFIG.medkit.maxHp, player.health + ArenaConfig_1.ITEM_CONFIG.medkit.heal);
+            player.health = newHp;
+        }
+        else {
+            state.plates--;
+            const newArmor = Math.min(ArenaConfig_1.ITEM_CONFIG.plate.maxArmor, player.armour + ArenaConfig_1.ITEM_CONFIG.plate.armor);
+            player.armour = newArmor;
+        }
+        emitItemCounts(player.id);
+        _api_1.RAGERP.cef.emit(player, "arena", "itemCastComplete", { item: itemType });
+    }, castTime);
+}
+_api_1.RAGERP.cef.register("arena", "useItem", (player, data) => {
+    try {
+        const parsed = typeof data === "string" ? JSON.parse(data) : data;
+        const item = parsed?.item;
+        if (item === "medkit" || item === "plate") {
+            useItem(player, item);
+        }
+    }
+    catch {
+        console.warn("[arena:useItem] Invalid data:", data);
+    }
+});
+
+
+/***/ },
+
+/***/ "./source/server/arena/WeaponAttachments.data.ts"
+/*!*******************************************************!*\
+  !*** ./source/server/arena/WeaponAttachments.data.ts ***!
+  \*******************************************************/
+(__unused_webpack_module, exports) {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.WEAPON_ATTACHMENTS = void 0;
+exports.getWeaponAttachments = getWeaponAttachments;
+exports.calculateRecoilModifier = calculateRecoilModifier;
+exports.WEAPON_ATTACHMENTS = [
+    {
+        weaponHash: 2578377531,
+        weaponName: "weapon_pistol50",
+        displayName: "Pistol .50",
+        components: [
+            { hash: 580369945, name: "Default Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 3654528394, name: "Extended Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 899381934, name: "Flashlight", category: "flashlight", recoilModifier: 1.0 },
+            { hash: 2805810788, name: "Suppressor", category: "muzzle", recoilModifier: 0.95 },
+            { hash: 2008591365, name: "Yusuf Amir Luxury Finish", category: "skin", recoilModifier: 1.0 },
+        ]
+    },
+    {
+        weaponHash: 3231910285,
+        weaponName: "weapon_specialcarbine",
+        displayName: "Special Carbine",
+        components: [
+            { hash: 3334989185, name: "Default Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 2089537806, name: "Extended Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 2076495324, name: "Flashlight", category: "flashlight", recoilModifier: 1.0 },
+            { hash: 2698550338, name: "Scope", category: "scope", recoilModifier: 1.0 },
+            { hash: 2805810788, name: "Suppressor", category: "muzzle", recoilModifier: 0.9 },
+            { hash: 202788691, name: "Grip", category: "grip", recoilModifier: 0.8 },
+            { hash: 1929467930, name: "Yusuf Amir Luxury Finish", category: "skin", recoilModifier: 1.0 },
+        ]
+    },
+    {
+        weaponHash: 2132975508,
+        weaponName: "weapon_bullpuprifle",
+        displayName: "Bullpup Rifle",
+        components: [
+            { hash: 3315675008, name: "Default Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 3009973007, name: "Extended Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 2076495324, name: "Flashlight", category: "flashlight", recoilModifier: 1.0 },
+            { hash: 2855028148, name: "Scope", category: "scope", recoilModifier: 1.0 },
+            { hash: 2205435306, name: "Suppressor", category: "muzzle", recoilModifier: 0.9 },
+            { hash: 202788691, name: "Grip", category: "grip", recoilModifier: 0.8 },
+            { hash: 2824322168, name: "Gilded Gun Metal Finish", category: "skin", recoilModifier: 1.0 },
+        ]
+    },
+    {
+        weaponHash: 4208062921,
+        weaponName: "weapon_carbinerifle_mk2",
+        displayName: "Carbine Rifle Mk II",
+        components: [
+            { hash: 1283078430, name: "Default Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 1574296533, name: "Extended Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 2076495324, name: "Flashlight", category: "flashlight", recoilModifier: 1.0 },
+            { hash: 3405310959, name: "Holographic Sight", category: "scope", recoilModifier: 1.0 },
+            { hash: 77277509, name: "Small Scope", category: "scope", recoilModifier: 1.0 },
+            { hash: 3328927042, name: "Medium Scope", category: "scope", recoilModifier: 1.0 },
+            { hash: 2205435306, name: "Suppressor", category: "muzzle", recoilModifier: 0.9 },
+            { hash: 3079677681, name: "Flat Muzzle Brake", category: "muzzle", recoilModifier: 0.85 },
+            { hash: 1303784126, name: "Tactical Muzzle Brake", category: "muzzle", recoilModifier: 0.82 },
+            { hash: 1602080333, name: "Fat-End Muzzle Brake", category: "muzzle", recoilModifier: 0.80 },
+            { hash: 3859329886, name: "Precision Muzzle Brake", category: "muzzle", recoilModifier: 0.78 },
+            { hash: 3024542883, name: "Heavy Duty Muzzle Brake", category: "muzzle", recoilModifier: 0.75 },
+            { hash: 3513717749, name: "Slanted Muzzle Brake", category: "muzzle", recoilModifier: 0.77 },
+            { hash: 2640679034, name: "Split-End Muzzle Brake", category: "muzzle", recoilModifier: 0.79 },
+            { hash: 2201368575, name: "Default Barrel", category: "barrel", recoilModifier: 1.0 },
+            { hash: 2335983627, name: "Heavy Barrel", category: "barrel", recoilModifier: 0.88 },
+            { hash: 2640299872, name: "Grip", category: "grip", recoilModifier: 0.8 },
+        ]
+    },
+    {
+        weaponHash: 487013001,
+        weaponName: "weapon_pumpshotgun",
+        displayName: "Pump Shotgun",
+        components: [
+            { hash: 0, name: "Default Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 2076495324, name: "Flashlight", category: "flashlight", recoilModifier: 1.0 },
+            { hash: 3859329886, name: "Suppressor", category: "muzzle", recoilModifier: 0.92 },
+            { hash: 2732039643, name: "Yusuf Amir Luxury Finish", category: "skin", recoilModifier: 1.0 },
+        ]
+    },
+    {
+        weaponHash: 3220176749,
+        weaponName: "weapon_assaultrifle",
+        displayName: "Assault Rifle",
+        components: [
+            { hash: 3193891350, name: "Default Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 2971750299, name: "Extended Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 2076495324, name: "Flashlight", category: "flashlight", recoilModifier: 1.0 },
+            { hash: 2855028148, name: "Scope", category: "scope", recoilModifier: 1.0 },
+            { hash: 2805810788, name: "Suppressor", category: "muzzle", recoilModifier: 0.9 },
+            { hash: 202788691, name: "Grip", category: "grip", recoilModifier: 0.8 },
+            { hash: 1319990579, name: "Yusuf Amir Luxury Finish", category: "skin", recoilModifier: 1.0 },
+        ]
+    },
+];
+const attachmentsByHash = new Map(exports.WEAPON_ATTACHMENTS.map(w => [w.weaponHash, w]));
+function getWeaponAttachments(hash) {
+    return attachmentsByHash.get(hash);
+}
+function calculateRecoilModifier(weaponHash, componentHashes) {
+    const weapon = attachmentsByHash.get(weaponHash);
+    if (!weapon)
+        return 1.0;
+    let modifier = 1.0;
+    for (const ch of componentHashes) {
+        const comp = weapon.components.find(c => c.hash === ch);
+        if (comp)
+            modifier *= comp.recoilModifier;
+    }
+    return modifier;
+}
+
+
+/***/ },
+
+/***/ "./source/server/arena/WeaponPresets.service.ts"
+/*!******************************************************!*\
+  !*** ./source/server/arena/WeaponPresets.service.ts ***!
+  \******************************************************/
+(__unused_webpack_module, exports, __webpack_require__) {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.loadPlayerPresets = loadPlayerPresets;
+exports.savePlayerPreset = savePlayerPreset;
+exports.applyWeaponPresets = applyWeaponPresets;
+const _api_1 = __webpack_require__(/*! @api */ "./source/server/api/index.ts");
+const WeaponPreset_entity_1 = __webpack_require__(/*! @entities/WeaponPreset.entity */ "./source/server/database/entity/WeaponPreset.entity.ts");
+const WeaponAttachments_data_1 = __webpack_require__(/*! ./WeaponAttachments.data */ "./source/server/arena/WeaponAttachments.data.ts");
+async function loadPlayerPresets(characterId) {
+    return _api_1.RAGERP.database.getRepository(WeaponPreset_entity_1.WeaponPresetEntity).find({ where: { characterId } });
+}
+async function savePlayerPreset(characterId, weaponName, components) {
+    const repo = _api_1.RAGERP.database.getRepository(WeaponPreset_entity_1.WeaponPresetEntity);
+    let preset = await repo.findOne({ where: { characterId, weaponName } });
+    if (preset) {
+        preset.components = components;
+        await repo.save(preset);
+    }
+    else {
+        preset = repo.create({ characterId, weaponName, components });
+        await repo.save(preset);
+    }
+}
+async function applyWeaponPresets(player, weaponHashes) {
+    if (!player.character)
+        return;
+    const presets = await loadPlayerPresets(player.character.id);
+    let combinedRecoil = 1.0;
+    for (const hash of weaponHashes) {
+        const attachData = (0, WeaponAttachments_data_1.getWeaponAttachments)(hash);
+        if (!attachData)
+            continue;
+        const preset = presets.find(p => p.weaponName === attachData.weaponName);
+        if (!preset || preset.components.length === 0)
+            continue;
+        const validComponents = preset.components.filter(ch => attachData.components.some(c => c.hash === ch));
+        player.call("client::weapon:applyComponents", [hash, JSON.stringify(validComponents)]);
+        const weaponRecoil = (0, WeaponAttachments_data_1.calculateRecoilModifier)(hash, validComponents);
+        combinedRecoil *= weaponRecoil;
+    }
+    player.call("client::recoil:setModifier", [combinedRecoil]);
+}
+_api_1.RAGERP.cef.register("loadout", "getPresets", async (player) => {
+    if (!player.character)
+        return;
+    const presets = await loadPlayerPresets(player.character.id);
+    _api_1.RAGERP.cef.emit(player, "loadout", "presetsLoaded", {
+        presets: presets.map(p => ({ weaponName: p.weaponName, components: p.components }))
+    });
+});
+_api_1.RAGERP.cef.register("loadout", "savePreset", async (player, data) => {
+    if (!player.character)
+        return;
+    try {
+        const parsed = JSON.parse(data);
+        const { weaponName, components } = parsed;
+        if (!weaponName || !Array.isArray(components))
+            return;
+        await savePlayerPreset(player.character.id, weaponName, components);
+        player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, "Loadout saved!");
+    }
+    catch {
+        player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "Failed to save loadout.");
+    }
+});
+
+
+/***/ },
+
+/***/ "./source/server/arena/ZoneSystem.ts"
+/*!*******************************************!*\
+  !*** ./source/server/arena/ZoneSystem.ts ***!
+  \*******************************************/
+(__unused_webpack_module, exports, __webpack_require__) {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.startZone = startZone;
+exports.stopZone = stopZone;
+exports.getZoneState = getZoneState;
+exports.tickZones = tickZones;
+const _api_1 = __webpack_require__(/*! @api */ "./source/server/api/index.ts");
+const ArenaConfig_1 = __webpack_require__(/*! ./ArenaConfig */ "./source/server/arena/ArenaConfig.ts");
+const ArenaMatch_manager_1 = __webpack_require__(/*! ./ArenaMatch.manager */ "./source/server/arena/ArenaMatch.manager.ts");
+const activeZones = new Map();
+const outOfBoundsStart = new Map();
+const OUT_OF_BOUNDS_RADIUS = 320;
+const OUT_OF_BOUNDS_GRACE = 8;
+function startZone(dimension, centerX, centerY, elapsedOffsetMs = 0) {
+    if (ArenaConfig_1.ZONE_PHASES.length === 0)
+        return;
+    const firstPhase = ArenaConfig_1.ZONE_PHASES[0];
+    const zone = {
+        dimension,
+        centerX,
+        centerY,
+        currentRadius: 200,
+        targetRadius: firstPhase.endRadius,
+        currentPhase: 0,
+        phaseStartedAt: Date.now() - elapsedOffsetMs,
+        phaseDuration: firstPhase.duration * 1000,
+        dps: firstPhase.dps,
+        active: true
+    };
+    activeZones.set(dimension, zone);
+}
+function stopZone(dimension) {
+    activeZones.delete(dimension);
+    outOfBoundsStart.clear();
+}
+function getZoneState(dimension) {
+    return activeZones.get(dimension);
+}
+function advancePhase(zone) {
+    zone.currentPhase++;
+    if (zone.currentPhase >= ArenaConfig_1.ZONE_PHASES.length) {
+        return false;
+    }
+    const phase = ArenaConfig_1.ZONE_PHASES[zone.currentPhase];
+    zone.currentRadius = zone.targetRadius;
+    zone.targetRadius = phase.endRadius;
+    zone.phaseDuration = phase.duration * 1000;
+    zone.phaseStartedAt = Date.now();
+    zone.dps = phase.dps;
+    return true;
+}
+function getCurrentRadius(zone) {
+    const elapsed = Date.now() - zone.phaseStartedAt;
+    const progress = Math.min(1, elapsed / zone.phaseDuration);
+    return zone.currentRadius + (zone.targetRadius - zone.currentRadius) * progress;
+}
+function isInZone(zone, x, y) {
+    const radius = getCurrentRadius(zone);
+    const dx = x - zone.centerX;
+    const dy = y - zone.centerY;
+    return (dx * dx + dy * dy) <= (radius * radius);
+}
+function tickZones() {
+    const now = Date.now();
+    activeZones.forEach((zone, dim) => {
+        if (!zone.active)
+            return;
+        const match = (0, ArenaMatch_manager_1.getMatchByDimension)(dim);
+        if (!match || match.state !== "active")
+            return;
+        const elapsed = now - zone.phaseStartedAt;
+        if (elapsed >= zone.phaseDuration) {
+            if (!advancePhase(zone)) {
+                zone.active = false;
+            }
+        }
+        const radius = getCurrentRadius(zone);
+        const phaseTimeLeft = Math.max(0, Math.ceil((zone.phaseDuration - (now - zone.phaseStartedAt)) / 1000));
+        const allPlayers = [...match.redTeam, ...match.blueTeam];
+        const playersToKill = [];
+        allPlayers.forEach((mp_) => {
+            const p = mp.players.at(mp_.id);
+            if (!p || !mp.players.exists(p))
+                return;
+            if (mp_.alive && !isInZone(zone, p.position.x, p.position.y)) {
+                const currentHp = p.health;
+                const newHp = currentHp - zone.dps;
+                if (newHp <= 0) {
+                    playersToKill.push(p);
+                }
+                else {
+                    p.health = newHp;
+                }
+            }
+            const dx = p.position.x - zone.centerX;
+            const dy = p.position.y - zone.centerY;
+            const distSq = dx * dx + dy * dy;
+            if (distSq > OUT_OF_BOUNDS_RADIUS * OUT_OF_BOUNDS_RADIUS) {
+                const startedAt = outOfBoundsStart.get(p.id) ?? now;
+                outOfBoundsStart.set(p.id, startedAt);
+                const timeLeft = Math.max(0, OUT_OF_BOUNDS_GRACE - Math.floor((now - startedAt) / 1000));
+                _api_1.RAGERP.cef.emit(p, "arena", "outOfBounds", { active: true, timeLeft });
+                if (timeLeft <= 0) {
+                    playersToKill.push(p);
+                }
+            }
+            else if (outOfBoundsStart.has(p.id)) {
+                outOfBoundsStart.delete(p.id);
+                _api_1.RAGERP.cef.emit(p, "arena", "outOfBounds", { active: false, timeLeft: 0 });
+            }
+            p.call("client::arena:zoneUpdate", [
+                zone.centerX,
+                zone.centerY,
+                Math.round(radius),
+                zone.currentPhase + 1,
+                ArenaConfig_1.ZONE_PHASES.length,
+                phaseTimeLeft,
+                zone.dps
+            ]);
+            _api_1.RAGERP.cef.emit(p, "arena", "zoneUpdate", {
+                centerX: zone.centerX,
+                centerY: zone.centerY,
+                radius: Math.round(radius),
+                phase: zone.currentPhase + 1,
+                totalPhases: ArenaConfig_1.ZONE_PHASES.length,
+                phaseTimeLeft,
+                dps: zone.dps
+            });
+        });
+        playersToKill.forEach((p) => {
+            if (mp.players.exists(p)) {
+                (0, ArenaMatch_manager_1.handleZoneDeath)(p);
+            }
+        });
+    });
+}
+setInterval(tickZones, 1000);
+
+
+/***/ },
+
 /***/ "./source/server/assets/Admin.asset.ts"
 /*!*********************************************!*\
   !*** ./source/server/assets/Admin.asset.ts ***!
@@ -2517,10 +3913,10 @@ class _CommandRegistry {
         return this._commands.get(aliasCommand);
     }
     reloadCommands(player) {
-        if (!player || !mp.players.exists(player) || !player.character)
+        if (!player || !mp.players.exists(player) || !player.account)
             return;
         const scriptCommands = exports.CommandRegistry.getallCommands();
-        const commandList = player.character.adminlevel <= 0 ? scriptCommands.filter((x) => !x.adminlevel).map((x) => `/${x.name}`) : scriptCommands.map((x) => `/${x.name}`);
+        const commandList = (player.account.adminlevel ?? 0) <= 0 ? scriptCommands.filter((x) => !x.adminlevel).map((x) => `/${x.name}`) : scriptCommands.map((x) => `/${x.name}`);
         CEFEvent_class_1.CefEvent.emit(player, "chat", "setCommands", commandList);
     }
 }
@@ -3555,7 +4951,8 @@ exports.WorldManager = new _WorldManager();
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const _api_1 = __webpack_require__(/*! @api */ "./source/server/api/index.ts");
-const Character_entity_1 = __webpack_require__(/*! @entities/Character.entity */ "./source/server/database/entity/Character.entity.ts");
+const Account_entity_1 = __webpack_require__(/*! @entities/Account.entity */ "./source/server/database/entity/Account.entity.ts");
+const Ban_entity_1 = __webpack_require__(/*! @entities/Ban.entity */ "./source/server/database/entity/Ban.entity.ts");
 const Items_module_1 = __webpack_require__(/*! @modules/inventory/Items.module */ "./source/server/modules/inventory/Items.module.ts");
 const index_1 = __webpack_require__(/*! @shared/index */ "./source/shared/index.ts");
 const Admin_asset_1 = __webpack_require__(/*! @assets/Admin.asset */ "./source/server/assets/Admin.asset.ts");
@@ -3632,7 +5029,7 @@ _api_1.RAGERP.commands.add({
         _api_1.RAGERP.commands
             .getallCommands()
             .filter((cmd) => {
-            return player.character && typeof cmd.adminlevel === "number" && cmd.adminlevel > 0 && cmd.adminlevel <= player.character.adminlevel;
+            return player.account && typeof cmd.adminlevel === "number" && cmd.adminlevel > 0 && cmd.adminlevel <= player.account.adminlevel;
         })
             .forEach((cmd) => {
             if (!cmd.adminlevel)
@@ -3663,7 +5060,7 @@ _api_1.RAGERP.commands.add({
     run: (player, fulltext) => {
         if (!fulltext.length)
             return _api_1.RAGERP.chat.sendSyntaxError(player, "/a [text]");
-        const admins = mp.players.toArray().filter((x) => x.character && x.character.adminlevel > 0);
+        const admins = mp.players.toArray().filter((x) => x.account && x.account.adminlevel > 0);
         admins.forEach((admin) => {
             admin.outputChatBox(`!{#ffff00}[A] ${player.name}: ${fulltext}`);
         });
@@ -3675,8 +5072,8 @@ _api_1.RAGERP.commands.add({
     run: (player) => {
         player.outputChatBox(`${"!{#32cd32}" /* RageShared.Enums.STRINGCOLORS.GREEN */}____________[ONLINE ADMINS]____________`);
         mp.players.forEach((target) => {
-            if (target && target.character && target.character.adminlevel) {
-                player.outputChatBox(`${target.name} as level ${target.character.adminlevel} admin.`);
+            if (target && target.account && target.account.adminlevel) {
+                player.outputChatBox(`${target.name} as level ${target.account.adminlevel} admin.`);
             }
         });
     }
@@ -3727,11 +5124,11 @@ _api_1.RAGERP.commands.add({
         if (adminLevel < 0 || adminLevel > 6)
             return player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "Admin level must be between 0 and 6");
         const targetPlayer = mp.players.at(targetId);
-        if (!targetPlayer || !mp.players.exists(targetPlayer) || !targetPlayer.character)
+        if (!targetPlayer || !mp.players.exists(targetPlayer) || !targetPlayer.account)
             return player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "Invalid player specified.");
-        targetPlayer.character.adminlevel = adminLevel;
-        targetPlayer.setVariable("adminLevel", targetPlayer.character.adminlevel);
-        await _api_1.RAGERP.database.getRepository(Character_entity_1.CharacterEntity).update(targetPlayer.character.id, { adminlevel: adminLevel });
+        targetPlayer.account.adminlevel = adminLevel;
+        targetPlayer.setVariable("adminLevel", adminLevel);
+        await _api_1.RAGERP.database.getRepository(Account_entity_1.AccountEntity).update(targetPlayer.account.id, { adminlevel: adminLevel });
         player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, `You've successfully made ${targetPlayer.name} an admin level ${adminLevel}`);
         targetPlayer.showNotify("info" /* RageShared.Enums.NotifyType.TYPE_INFO */, `${player.name} has made you an admin level ${adminLevel}`);
         _api_1.RAGERP.chat.sendAdminWarning(4284696575 /* RageShared.Enums.HEXCOLORS.LIGHTRED */, adminLevel > 0
@@ -3916,6 +5313,160 @@ _api_1.RAGERP.commands.add({
         }
     }
 });
+_api_1.RAGERP.commands.add({
+    name: "listplayers",
+    aliases: ["players", "online"],
+    adminlevel: 1 /* RageShared.Enums.ADMIN_LEVELS.LEVEL_ONE */,
+    description: "List all online players",
+    run: (player) => {
+        player.outputChatBox(`${"!{#32cd32}" /* RageShared.Enums.STRINGCOLORS.GREEN */}____________[ONLINE PLAYERS]____________`);
+        mp.players.forEach((p) => {
+            if (p && mp.players.exists(p)) {
+                const charName = p.character?.name ?? "N/A";
+                player.outputChatBox(`ID ${p.id} | ${p.name} | ${charName} | Ping: ${p.ping} | Dim: ${p.dimension}`);
+            }
+        });
+        player.outputChatBox(`${"!{#32cd32}" /* RageShared.Enums.STRINGCOLORS.GREEN */}Total: ${mp.players.length} players`);
+    }
+});
+_api_1.RAGERP.commands.add({
+    name: "kick",
+    adminlevel: 1 /* RageShared.Enums.ADMIN_LEVELS.LEVEL_ONE */,
+    description: "Kick a player",
+    run: (player, fulltext, target, ...reasonParts) => {
+        if (!target)
+            return _api_1.RAGERP.chat.sendSyntaxError(player, "/kick [player_id] [reason]");
+        const targetId = parseInt(target);
+        if (isNaN(targetId))
+            return _api_1.RAGERP.chat.sendSyntaxError(player, "/kick [player_id] [reason]");
+        const targetPlayer = mp.players.at(targetId);
+        if (!targetPlayer || !mp.players.exists(targetPlayer))
+            return player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "Invalid player.");
+        const reason = reasonParts.join(" ") || "No reason specified";
+        targetPlayer.outputChatBox(`!{#ff0000}You have been kicked by ${player.name}: ${reason}`);
+        setTimeout(() => {
+            if (mp.players.exists(targetPlayer))
+                targetPlayer.kick(reason);
+        }, 500);
+        _api_1.RAGERP.chat.sendAdminWarning(4284696575 /* RageShared.Enums.HEXCOLORS.LIGHTRED */, `AdmWarn: ${player.name} kicked ${targetPlayer.name} (${targetPlayer.id}). Reason: ${reason}`);
+        player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, `Kicked ${targetPlayer.name}.`);
+    }
+});
+_api_1.RAGERP.commands.add({
+    name: "ban",
+    adminlevel: 2 /* RageShared.Enums.ADMIN_LEVELS.LEVEL_TWO */,
+    description: "Ban a player",
+    run: async (player, fulltext, target, ...reasonParts) => {
+        if (!target)
+            return _api_1.RAGERP.chat.sendSyntaxError(player, "/ban [player_id] [reason] [duration_hours optional]");
+        const targetId = parseInt(target);
+        if (isNaN(targetId))
+            return _api_1.RAGERP.chat.sendSyntaxError(player, "/ban [player_id] [reason]");
+        const targetPlayer = mp.players.at(targetId);
+        if (!targetPlayer || !mp.players.exists(targetPlayer) || !targetPlayer.account) {
+            return player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "Invalid player.");
+        }
+        const reason = reasonParts.join(" ") || "No reason specified";
+        const ban = new Ban_entity_1.BanEntity();
+        ban.username = targetPlayer.account.username;
+        ban.ip = targetPlayer.ip;
+        ban.serial = targetPlayer.serial ?? null;
+        ban.rsgId = targetPlayer.socialClub ?? null;
+        ban.reason = reason;
+        ban.bannedBy = player.name;
+        ban.bannedByLevel = player.account?.adminlevel ?? 0;
+        ban.lifttime = null;
+        await _api_1.RAGERP.database.getRepository(Ban_entity_1.BanEntity).save(ban);
+        targetPlayer.outputChatBox(`!{#ff0000}You have been banned by ${player.name}: ${reason}`);
+        setTimeout(() => {
+            if (mp.players.exists(targetPlayer))
+                targetPlayer.kick(`Banned: ${reason}`);
+        }, 500);
+        _api_1.RAGERP.chat.sendAdminWarning(4284696575 /* RageShared.Enums.HEXCOLORS.LIGHTRED */, `AdmWarn: ${player.name} banned ${targetPlayer.name}. Reason: ${reason}`);
+        player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, `Banned ${targetPlayer.name}.`);
+    }
+});
+_api_1.RAGERP.commands.add({
+    name: "unban",
+    adminlevel: 2 /* RageShared.Enums.ADMIN_LEVELS.LEVEL_TWO */,
+    description: "Unban a player by username",
+    run: async (player, fulltext, identifier) => {
+        if (!identifier)
+            return _api_1.RAGERP.chat.sendSyntaxError(player, "/unban [username]");
+        const ban = await _api_1.RAGERP.database.getRepository(Ban_entity_1.BanEntity).findOne({ where: { username: identifier } });
+        if (!ban)
+            return player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, `No ban found for "${identifier}".`);
+        await _api_1.RAGERP.database.getRepository(Ban_entity_1.BanEntity).remove(ban);
+        _api_1.RAGERP.chat.sendAdminWarning(4284696575 /* RageShared.Enums.HEXCOLORS.LIGHTRED */, `AdmWarn: ${player.name} unbanned ${identifier}.`);
+        player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, `Unbanned ${identifier}.`);
+    }
+});
+_api_1.RAGERP.commands.add({
+    name: "vanish",
+    aliases: ["invisible"],
+    adminlevel: 1 /* RageShared.Enums.ADMIN_LEVELS.LEVEL_ONE */,
+    description: "Toggle invisibility",
+    run: (player) => {
+        const isVanished = player.getVariable("vanished") ?? false;
+        player.setVariable("vanished", !isVanished);
+        if (!isVanished) {
+            player.alpha = 0;
+            player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, "Vanish ON — you are invisible.");
+        }
+        else {
+            player.alpha = 255;
+            player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, "Vanish OFF — you are visible.");
+        }
+        _api_1.RAGERP.chat.sendAdminWarning(4284696575 /* RageShared.Enums.HEXCOLORS.LIGHTRED */, `AdmWarn: ${player.name} toggled vanish ${!isVanished ? "ON" : "OFF"}.`);
+    }
+});
+_api_1.RAGERP.commands.add({
+    name: "bird",
+    aliases: ["freecam"],
+    adminlevel: 1 /* RageShared.Enums.ADMIN_LEVELS.LEVEL_ONE */,
+    description: "Toggle bird's-eye freecam (uses noclip)",
+    run: (player) => {
+        const isNoclip = player.getVariable("noclip") ?? false;
+        if (isNoclip) {
+            player.setVariable("noclip", false);
+            player.call("client::noclip:stop");
+            player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, "Bird mode OFF.");
+        }
+        else {
+            player.setVariable("noclip", true);
+            player.alpha = 0;
+            player.setVariable("adminLevel", player.account?.adminlevel ?? 1);
+            mp.players.forEach((p) => {
+                if (p.id !== player.id && mp.players.exists(p)) {
+                    p.call("client::player:noclip", [player.id, true]);
+                }
+            });
+            player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, "Bird mode ON. Press F5 or use /birdoff to exit.");
+        }
+    }
+});
+_api_1.RAGERP.commands.add({
+    name: "birdoff",
+    adminlevel: 1 /* RageShared.Enums.ADMIN_LEVELS.LEVEL_ONE */,
+    description: "Disable bird mode",
+    run: (player) => {
+        player.setVariable("noclip", false);
+        player.call("client::noclip:stop");
+        player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, "Bird mode OFF.");
+    }
+});
+_api_1.RAGERP.commands.add({
+    name: "specoff",
+    adminlevel: 1 /* RageShared.Enums.ADMIN_LEVELS.LEVEL_ONE */,
+    description: "Stop spectating",
+    run: (player) => {
+        player.call("client::spectate:stop");
+        player.setVariable("isSpectating", false);
+        if (player.lastPosition)
+            player.position = player.lastPosition;
+        player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, "Stopped spectating.");
+    }
+});
 
 
 /***/ },
@@ -3927,8 +5478,47 @@ _api_1.RAGERP.commands.add({
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+const fs = __importStar(__webpack_require__(/*! fs */ "fs"));
+const path = __importStar(__webpack_require__(/*! path */ "path"));
 const _api_1 = __webpack_require__(/*! @api */ "./source/server/api/index.ts");
+const ArenaPresets_asset_1 = __webpack_require__(/*! @arena/ArenaPresets.asset */ "./source/server/arena/ArenaPresets.asset.ts");
+const Arena_module_1 = __webpack_require__(/*! @arena/Arena.module */ "./source/server/arena/Arena.module.ts");
+let attachEditorEditing = false;
+const ATTACHMENTS_FILE = path.join(process.cwd(), "attachments.txt");
 const arenaMarkedPresets = new Map();
 const ADMIN_DEV = 6 /* RageShared.Enums.ADMIN_LEVELS.LEVEL_SIX */;
 _api_1.RAGERP.commands.add({
@@ -3973,13 +5563,14 @@ _api_1.RAGERP.commands.add({
         player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, `Dimension set to ${dim}`);
     }
 });
-_api_1.RAGERP.commands.add({
+const hopoutsMarkCmd = {
     name: "arena_mark",
-    description: "Mark a point for arena preset (center|redspawn|bluespawn|redcar|bluecar|safenode)",
+    aliases: ["hopouts_mark"],
+    description: "Mark a point for Hopouts location (e.g. /arena_mark vespucci_canal center)",
     adminlevel: ADMIN_DEV,
     run: (player, _fulltext, presetId, markType) => {
         if (!presetId || !markType)
-            return _api_1.RAGERP.chat.sendSyntaxError(player, "/arena_mark <presetId> <center|redspawn|bluespawn|redcar|bluecar|safenode>");
+            return _api_1.RAGERP.chat.sendSyntaxError(player, "/arena_mark <locationId> <center|redspawn|bluespawn|redcar|bluecar|safenode>");
         const type = markType.toLowerCase();
         const valid = ["center", "redspawn", "bluespawn", "redcar", "bluecar", "safenode"];
         if (!valid.includes(type))
@@ -4011,10 +5602,11 @@ _api_1.RAGERP.commands.add({
             player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, `[${presetId}] ${type} marked`);
         }
     }
-});
+};
+_api_1.RAGERP.commands.add(hopoutsMarkCmd);
 _api_1.RAGERP.commands.add({
     name: "arena_export",
-    description: "Export arena preset as JSON",
+    description: "Export Hopouts location preset as JSON",
     adminlevel: ADMIN_DEV,
     run: (player, _fulltext, presetId) => {
         if (!presetId)
@@ -4032,8 +5624,105 @@ _api_1.RAGERP.commands.add({
             safeNodes: preset.safeNodes && preset.safeNodes.length > 0 ? preset.safeNodes : undefined
         };
         const json = JSON.stringify(exportObj, null, 2);
-        console.log(`\n--- Arena preset: ${presetId} ---\n${json}\n---`);
+        console.log(`\n--- Hopouts location: ${presetId} ---\n${json}\n---`);
         player.outputChatBox(`${"!{#32cd32}" /* RageShared.Enums.STRINGCOLORS.GREEN */}[${presetId}] Exported. Check server console for JSON.`);
+    }
+});
+const hopoutsSaveCmd = {
+    name: "arena_save",
+    aliases: ["hopouts_save"],
+    description: "Save Hopouts location (e.g. /arena_save vespucci_canal \"Vespucci Canal\")",
+    adminlevel: ADMIN_DEV,
+    run: (player, _fulltext, presetId, presetName) => {
+        if (!presetId)
+            return _api_1.RAGERP.chat.sendSyntaxError(player, "/arena_save <locationId> [displayName]");
+        const preset = arenaMarkedPresets.get(presetId);
+        if (!preset)
+            return player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, `No points marked for preset "${presetId}". Use /arena_mark first.`);
+        if (!preset.center || !preset.redspawn || !preset.bluespawn || !preset.redcar || !preset.bluecar) {
+            return player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "Mark center, redspawn, bluespawn, redcar, bluecar first.");
+        }
+        const name = (presetName && presetName.trim()) || presetId;
+        const toSave = {
+            id: presetId,
+            name,
+            center: preset.center,
+            redSpawn: preset.redspawn,
+            blueSpawn: preset.bluespawn,
+            redCar: preset.redcar,
+            blueCar: preset.bluecar,
+            safeNodes: preset.safeNodes && preset.safeNodes.length > 0 ? preset.safeNodes : undefined
+        };
+        if ((0, ArenaPresets_asset_1.saveArenaPreset)(toSave)) {
+            player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, `Hopouts location "${name}" saved.`);
+        }
+        else {
+            player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "Failed to save Hopouts location.");
+        }
+    }
+};
+_api_1.RAGERP.commands.add(hopoutsSaveCmd);
+_api_1.RAGERP.commands.add({
+    name: "hopouts_locations",
+    aliases: ["arena_locations"],
+    description: "List available Hopouts locations",
+    run: (player) => {
+        const presets = (0, ArenaPresets_asset_1.getArenaPresets)();
+        if (presets.length === 0) {
+            return player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "No Hopouts locations. Use /arena_mark and /arena_save to create.");
+        }
+        const list = presets.map((p) => `${p.name} (${p.id})`).join(", ");
+        player.outputChatBox(`${"!{#32cd32}" /* RageShared.Enums.STRINGCOLORS.GREEN */}Hopouts locations: ${list}`);
+    }
+});
+_api_1.RAGERP.commands.add({
+    name: "hopouts_solo",
+    aliases: ["arena_solo"],
+    description: "Start a solo Hopouts match for testing (no queue)",
+    adminlevel: ADMIN_DEV,
+    run: (player, _fulltext, presetId) => {
+        if (!player.character)
+            return player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "No character loaded.");
+        if ((0, Arena_module_1.startSoloMatch)(player, presetId?.trim() || undefined)) {
+            player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, "Solo Hopouts match started.");
+        }
+        else {
+            player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "Cannot start. Already in match, or no Hopouts locations. Use /arena_mark and /arena_save first.");
+        }
+    }
+});
+// Attachments editor (based on https://github.com/1PepeCortez/Attachments-editor)
+_api_1.RAGERP.commands.add({
+    name: "attach",
+    description: "Start attach editor: /attach [object_name] (e.g. prop_cs_beer_bot_02)",
+    adminlevel: ADMIN_DEV,
+    run: (player, _fulltext, objectName) => {
+        if (attachEditorEditing)
+            return player.outputChatBox("!{#ff0000}Already editing an object!");
+        if (!objectName || !objectName.trim())
+            return player.outputChatBox("!{#ff0000}/attach [object_name]");
+        player.call("attachObject", [objectName.trim()]);
+        attachEditorEditing = true;
+    }
+});
+mp.events.add("startEditAttachServer", () => {
+    attachEditorEditing = true;
+});
+mp.events.add("finishAttach", (player, objectJson) => {
+    attachEditorEditing = false;
+    try {
+        const data = JSON.parse(objectJson);
+        if (data.cancel === true)
+            return;
+        const line = `[ '${data.bodyName}', ${data.boneIndex}, '${data.object}', ${data.body}, ${data.x.toFixed(4)}, ${data.y.toFixed(4)}, ${data.z.toFixed(4)}, ${data.rx.toFixed(4)}, ${data.ry.toFixed(4)}, ${data.rz.toFixed(4)} ],\r\n`;
+        player.outputChatBox(line);
+        fs.appendFile(ATTACHMENTS_FILE, line, (err) => {
+            if (err)
+                console.error("[AttachEditor] Failed to save:", err.message);
+        });
+    }
+    catch {
+        // ignore parse errors
     }
 });
 
@@ -4196,6 +5885,106 @@ _api_1.RAGERP.commands.add({
 
 /***/ },
 
+/***/ "./source/server/commands/Freeroam.commands.ts"
+/*!*****************************************************!*\
+  !*** ./source/server/commands/Freeroam.commands.ts ***!
+  \*****************************************************/
+(__unused_webpack_module, exports, __webpack_require__) {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const _api_1 = __webpack_require__(/*! @api */ "./source/server/api/index.ts");
+const Weapons_assets_1 = __webpack_require__(/*! @assets/Weapons.assets */ "./source/server/assets/Weapons.assets.ts");
+/**
+ * Freeroam mode: players can set their own dimension, spawn vehicles, and spawn weapons for FFA.
+ */
+_api_1.RAGERP.commands.add({
+    name: "freeroam",
+    aliases: ["ffa", "fr"],
+    description: "Show freeroam commands",
+    run: (player) => {
+        player.outputChatBox(`${"!{#32cd32}" /* RageShared.Enums.STRINGCOLORS.GREEN */}--- Freeroam / FFA ---`);
+        player.outputChatBox(`${"!{#ffffff}" /* RageShared.Enums.STRINGCOLORS.WHITE */}/fdim <id> - Set your dimension (private instance)`);
+        player.outputChatBox(`${"!{#ffffff}" /* RageShared.Enums.STRINGCOLORS.WHITE */}/fveh <model> - Spawn vehicle (e.g. sultan, infernus)`);
+        player.outputChatBox(`${"!{#ffffff}" /* RageShared.Enums.STRINGCOLORS.WHITE */}/fgun <weapon> - Give weapon (e.g. pistol, assaultrifle)`);
+        player.outputChatBox(`${"!{#ffffff}" /* RageShared.Enums.STRINGCOLORS.WHITE */}/poligon - Teleport to shooting range`);
+    }
+});
+const SHOOTING_RANGE_POS = new mp.Vector3(821.5705, -2163.812, 29.656);
+_api_1.RAGERP.commands.add({
+    name: "poligon",
+    aliases: ["shootingrange", "range"],
+    description: "Teleport to shooting range (45 targets, Assault Rifle + Carbine Rifle)",
+    run: (player) => {
+        if (!player.getVariable("loggedin"))
+            return player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "You must be logged in.");
+        player.giveWeaponEx(Weapons_assets_1.weaponHash.assaultrifle, 1000, 30);
+        player.giveWeaponEx(Weapons_assets_1.weaponHash.carbinerifle, 1000, 30);
+        player.position = SHOOTING_RANGE_POS;
+        player.call("client::shootingrange:start");
+        player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, "Shooting range started! Hit 45 targets.");
+    }
+});
+mp.events.add("FinishedPoligon", (player, points) => {
+    player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, `Shooting range complete! Score: ${points} points`);
+});
+_api_1.RAGERP.commands.add({
+    name: "fdim",
+    aliases: ["dimension"],
+    description: "Set your dimension (private instance for you and your group)",
+    run: (player, _fulltext, id) => {
+        if (!player.getVariable("loggedin"))
+            return player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "You must be logged in.");
+        if (!id)
+            return _api_1.RAGERP.chat.sendSyntaxError(player, "/fdim <id>");
+        const dim = parseInt(id, 10);
+        if (isNaN(dim) || dim < 0)
+            return player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "Invalid dimension ID (use 0 or positive number).");
+        player.dimension = dim;
+        player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, `Dimension set to ${dim}`);
+    }
+});
+_api_1.RAGERP.commands.add({
+    name: "fveh",
+    aliases: ["fcar"],
+    description: "Spawn a vehicle (e.g. /fveh sultan, /fveh infernus)",
+    run: (player, _fulltext, model) => {
+        if (!player.getVariable("loggedin"))
+            return player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "You must be logged in.");
+        if (!model || !model.trim())
+            return _api_1.RAGERP.chat.sendSyntaxError(player, "/fveh <model>");
+        const modelName = model.trim().toLowerCase().replace(/^vehicle_/, "");
+        const hash = mp.joaat(modelName);
+        if (hash === 0 || hash === mp.joaat("null")) {
+            return player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, `Unknown vehicle model: ${model}`);
+        }
+        const vehicle = new _api_1.RAGERP.entities.vehicles.new(6 /* RageShared.Vehicles.Enums.VEHICLETYPES.FREEROAM */, modelName, player.position, player.heading, player.dimension);
+        player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, `Spawned ${modelName}`);
+    }
+});
+_api_1.RAGERP.commands.add({
+    name: "fgun",
+    aliases: ["fweapon", "weapon", "gun", "wep"],
+    description: "Give yourself a weapon (e.g. /fgun pistol, /weapon assaultrifle)",
+    run: (player, _fulltext, weaponName) => {
+        if (!player.getVariable("loggedin"))
+            return player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "You must be logged in.");
+        if (!weaponName || !weaponName.trim())
+            return _api_1.RAGERP.chat.sendSyntaxError(player, "/fgun <weapon>");
+        const name = weaponName.trim().toLowerCase().replace(/^weapon_/, "").replace(/\s+/g, "_").replace(/-/g, "_");
+        const hash = Weapons_assets_1.weaponHash[name] ?? mp.joaat(`weapon_${name}`);
+        if (!hash || hash === mp.joaat("weapon_unarmed")) {
+            return player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, `Unknown weapon: ${weaponName}. Try: pistol, smg, assaultrifle, shotgun, sniperrifle`);
+        }
+        const ammo = 999;
+        player.giveWeaponEx(hash, ammo, 30);
+        player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, `Gave ${weaponName}`);
+    }
+});
+
+
+/***/ },
+
 /***/ "./source/server/commands/Player.commands.ts"
 /*!***************************************************!*\
   !*** ./source/server/commands/Player.commands.ts ***!
@@ -4279,6 +6068,7 @@ __webpack_require__(/*! ./Admin.commands */ "./source/server/commands/Admin.comm
 __webpack_require__(/*! ./Dev.commands */ "./source/server/commands/Dev.commands.ts");
 __webpack_require__(/*! ./Player.commands */ "./source/server/commands/Player.commands.ts");
 __webpack_require__(/*! ./ArenaDev.commands */ "./source/server/commands/ArenaDev.commands.ts");
+__webpack_require__(/*! ./Freeroam.commands */ "./source/server/commands/Freeroam.commands.ts");
 
 
 /***/ },
@@ -4335,6 +6125,7 @@ const dotenv = __importStar(__webpack_require__(/*! dotenv */ "dotenv"));
 const Inventory_entity_1 = __webpack_require__(/*! ./entity/Inventory.entity */ "./source/server/database/entity/Inventory.entity.ts");
 const Vehicle_entity_1 = __webpack_require__(/*! ./entity/Vehicle.entity */ "./source/server/database/entity/Vehicle.entity.ts");
 const Bank_entity_1 = __webpack_require__(/*! @entities/Bank.entity */ "./source/server/database/entity/Bank.entity.ts");
+const WeaponPreset_entity_1 = __webpack_require__(/*! ./entity/WeaponPreset.entity */ "./source/server/database/entity/WeaponPreset.entity.ts");
 dotenv.config();
 let beta = true;
 const config = {
@@ -4363,7 +6154,7 @@ exports.MainDataSource = new typeorm_1.DataSource({
     synchronize: true,
     connectTimeoutMS: config.connectTimeout,
     logging: ["error"],
-    entities: [Account_entity_1.AccountEntity, Character_entity_1.CharacterEntity, Bank_entity_1.BankAccountEntity, Ban_entity_1.BanEntity, Inventory_entity_1.InventoryItemsEntity, Vehicle_entity_1.VehicleEntity],
+    entities: [Account_entity_1.AccountEntity, Character_entity_1.CharacterEntity, Bank_entity_1.BankAccountEntity, Ban_entity_1.BanEntity, Inventory_entity_1.InventoryItemsEntity, Vehicle_entity_1.VehicleEntity, WeaponPreset_entity_1.WeaponPresetEntity],
     migrations: [],
     subscribers: [],
     logger: Logger_module_1.DatabaseLogger.getInstance(loggerConfig)
@@ -4514,6 +6305,7 @@ const typeorm_1 = __webpack_require__(/*! typeorm */ "typeorm");
 const Character_entity_1 = __webpack_require__(/*! ./Character.entity */ "./source/server/database/entity/Character.entity.ts");
 let AccountEntity = class AccountEntity {
     id;
+    adminlevel = 0;
     username;
     password;
     email;
@@ -4525,6 +6317,10 @@ __decorate([
     (0, typeorm_1.PrimaryGeneratedColumn)(),
     __metadata("design:type", Number)
 ], AccountEntity.prototype, "id", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: "int", width: 11, default: 0 }),
+    __metadata("design:type", Number)
+], AccountEntity.prototype, "adminlevel", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: "varchar", length: 32 }),
     __metadata("design:type", String)
@@ -4715,13 +6511,12 @@ const Core_class_1 = __webpack_require__(/*! @modules/inventory/Core.class */ ".
 const CEFEvent_class_1 = __webpack_require__(/*! @classes/CEFEvent.class */ "./source/server/classes/CEFEvent.class.ts");
 const Command_class_1 = __webpack_require__(/*! @classes/Command.class */ "./source/server/classes/Command.class.ts");
 const Account_entity_1 = __webpack_require__(/*! ./Account.entity */ "./source/server/database/entity/Account.entity.ts");
-const Death_event_1 = __webpack_require__(/*! @events/Death.event */ "./source/server/serverevents/Death.event.ts");
+const Death_utils_1 = __webpack_require__(/*! @events/Death.utils */ "./source/server/serverevents/Death.utils.ts");
 const index_1 = __webpack_require__(/*! @shared/index */ "./source/shared/index.ts");
 const Bank_entity_1 = __webpack_require__(/*! @entities/Bank.entity */ "./source/server/database/entity/Bank.entity.ts");
 let CharacterEntity = class CharacterEntity {
     id;
     account;
-    adminlevel = 0;
     appearance = {
         face: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0, 11: 0, 12: 0, 13: 0, 14: 0, 15: 0, 16: 0, 17: 0, 18: 0, 19: 0 },
         parents: { father: 0, mother: 0, leatherMix: 0, similarity: 0 },
@@ -4776,21 +6571,25 @@ let CharacterEntity = class CharacterEntity {
             return;
         const { x, y, z, heading } = player.character.position;
         player.character.applyAppearance(player);
+        const clothes = player.character.appearance.clothes;
+        if (clothes) {
+            player.call("client::wardrobe:applyClothes", [JSON.stringify(clothes)]);
+        }
         player.character.loadInventory(player);
         player.character.setStoreData(player, "ping", player.ping);
         player.character.setStoreData(player, "wantedLevel", player.character.wantedLevel);
-        player.setVariable("adminLevel", player.character.adminlevel);
+        player.setVariable("adminLevel", player.account?.adminlevel ?? 0);
         CEFEvent_class_1.CefEvent.emit(player, "player", "setKeybindData", { I: "Open Inventory", ALT: "Interaction" });
         await player.requestCollisionAt(x, y, z).then(() => {
             player.spawn(new mp.Vector3(x, y, z));
         });
         player.heading = heading;
         if (player.character.deathState === 1 /* RageShared.Players.Enums.DEATH_STATES.STATE_INJURED */) {
-            (0, Death_event_1.setPlayerToInjuredState)(player);
+            (0, Death_utils_1.setPlayerToInjuredState)(player);
         }
         player.outputChatBox(`Welcome to !{red}RAGEMP ROLEPLAY!{white} ${player.name}!`);
-        if (player.character.adminlevel) {
-            player.outputChatBox(`>>> You are logged in as !{green}LEVEL ${player.character.adminlevel}!{white} admin!`);
+        if (player.account?.adminlevel) {
+            player.outputChatBox(`>>> You are logged in as !{green}LEVEL ${player.account.adminlevel}!{white} admin!`);
         }
         player.character.setStoreData(player, "cash", player.character.cash);
         !player.character.lastlogin ? (player.character.lastlogin = new Date()) : player.outputChatBox(`Your last login was on ${player.character.lastlogin}`);
@@ -4810,10 +6609,6 @@ __decorate([
     (0, typeorm_1.ManyToOne)(() => Account_entity_1.AccountEntity, (account) => account.id),
     __metadata("design:type", Account_entity_1.AccountEntity)
 ], CharacterEntity.prototype, "account", void 0);
-__decorate([
-    (0, typeorm_1.Column)({ type: "int", width: 11, default: 0 }),
-    __metadata("design:type", Number)
-], CharacterEntity.prototype, "adminlevel", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: "jsonb", default: null }),
     __metadata("design:type", Object)
@@ -5098,6 +6893,61 @@ exports.VehicleEntity = VehicleEntity = __decorate([
 
 /***/ },
 
+/***/ "./source/server/database/entity/WeaponPreset.entity.ts"
+/*!**************************************************************!*\
+  !*** ./source/server/database/entity/WeaponPreset.entity.ts ***!
+  \**************************************************************/
+(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.WeaponPresetEntity = void 0;
+const typeorm_1 = __webpack_require__(/*! typeorm */ "typeorm");
+const Character_entity_1 = __webpack_require__(/*! ./Character.entity */ "./source/server/database/entity/Character.entity.ts");
+let WeaponPresetEntity = class WeaponPresetEntity {
+    id;
+    character;
+    characterId;
+    weaponName;
+    components = [];
+};
+exports.WeaponPresetEntity = WeaponPresetEntity;
+__decorate([
+    (0, typeorm_1.PrimaryGeneratedColumn)(),
+    __metadata("design:type", Number)
+], WeaponPresetEntity.prototype, "id", void 0);
+__decorate([
+    (0, typeorm_1.ManyToOne)(() => Character_entity_1.CharacterEntity, { onDelete: "CASCADE" }),
+    __metadata("design:type", Character_entity_1.CharacterEntity)
+], WeaponPresetEntity.prototype, "character", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: "int" }),
+    __metadata("design:type", Number)
+], WeaponPresetEntity.prototype, "characterId", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: "varchar", length: 64 }),
+    __metadata("design:type", String)
+], WeaponPresetEntity.prototype, "weaponName", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: "jsonb", default: "[]" }),
+    __metadata("design:type", Array)
+], WeaponPresetEntity.prototype, "components", void 0);
+exports.WeaponPresetEntity = WeaponPresetEntity = __decorate([
+    (0, typeorm_1.Entity)({ name: "weapon_presets" })
+], WeaponPresetEntity);
+
+
+/***/ },
+
 /***/ "./source/server/modules/Attachments.module.ts"
 /*!*****************************************************!*\
   !*** ./source/server/modules/Attachments.module.ts ***!
@@ -5205,7 +7055,7 @@ exports.Chat = {
      * @returns {void}
      */
     sendAdminWarning(color, message, level = 1 /* RageShared.Enums.ADMIN_LEVELS.LEVEL_ONE */) {
-        const players = mp.players.toArray().filter((x) => x.character && x.character.adminlevel >= level);
+        const players = mp.players.toArray().filter((x) => x.account && x.account.adminlevel >= level);
         const padColor = color.toString(16).toUpperCase().padStart(8, "0").slice(0, -2);
         players.forEach((player) => {
             player.outputChatBox(`!{#${padColor}}${message}`);
@@ -9166,9 +11016,9 @@ mp.Player.prototype.showNotify = function (type, message, skin = "dark") {
  * @returns {number} The admin level of the player.
  */
 mp.Player.prototype.getAdminLevel = function () {
-    if (!this || !mp.players.exists(this) || !this.character)
+    if (!this || !mp.players.exists(this) || !this.account)
         return 0;
-    return this.character.adminlevel;
+    return this.account.adminlevel;
 };
 /**
  * Gives a weapon to the player.
@@ -9258,6 +11108,62 @@ mp.Player.prototype.attachObject = function (name, attached) {
 
 /***/ },
 
+/***/ "./source/server/serverevents/Arena.event.ts"
+/*!***************************************************!*\
+  !*** ./source/server/serverevents/Arena.event.ts ***!
+  \***************************************************/
+(__unused_webpack_module, exports, __webpack_require__) {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const _api_1 = __webpack_require__(/*! @api */ "./source/server/api/index.ts");
+const Arena_module_1 = __webpack_require__(/*! @arena/Arena.module */ "./source/server/arena/Arena.module.ts");
+const ArenaMatch_manager_1 = __webpack_require__(/*! @arena/ArenaMatch.manager */ "./source/server/arena/ArenaMatch.manager.ts");
+const ArenaConfig_1 = __webpack_require__(/*! @arena/ArenaConfig */ "./source/server/arena/ArenaConfig.ts");
+_api_1.RAGERP.cef.register("arena", "joinQueue", async (player, data) => {
+    let size = 2;
+    try {
+        const parsed = typeof data === "string" ? JSON.parse(data) : data;
+        if (parsed && typeof parsed === "object" && parsed.size) {
+            const s = Number(parsed.size);
+            if (ArenaConfig_1.QUEUE_SIZES.includes(s))
+                size = s;
+        }
+        else if (typeof parsed === "number") {
+            if (ArenaConfig_1.QUEUE_SIZES.includes(parsed))
+                size = parsed;
+        }
+    }
+    catch { /* use default */ }
+    if ((0, Arena_module_1.joinQueue)(player, size)) {
+        _api_1.RAGERP.cef.emit(player, "system", "setPage", "arena_lobby");
+    }
+});
+_api_1.RAGERP.cef.register("arena", "leaveQueue", async (player) => {
+    (0, Arena_module_1.leaveQueue)(player);
+    _api_1.RAGERP.cef.startPage(player, "mainmenu");
+    _api_1.RAGERP.cef.emit(player, "system", "setPage", "mainmenu");
+});
+_api_1.RAGERP.cef.register("arena", "leaveMatch", async (player) => {
+    if ((0, ArenaMatch_manager_1.leaveMatch)(player)) {
+        player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, "Left arena match.");
+    }
+});
+_api_1.RAGERP.cef.register("arena", "vote", async (player, data) => {
+    try {
+        const parsed = typeof data === "string" ? JSON.parse(data) : data;
+        const mapId = typeof parsed === "object" && parsed?.mapId ? String(parsed.mapId) : null;
+        if (mapId)
+            (0, Arena_module_1.vote)(player, mapId);
+    }
+    catch {
+        console.warn("[arena:vote] Invalid vote data:", data);
+    }
+});
+
+
+/***/ },
+
 /***/ "./source/server/serverevents/Auth.event.ts"
 /*!**************************************************!*\
   !*** ./source/server/serverevents/Auth.event.ts ***!
@@ -9321,6 +11227,9 @@ _api_1.RAGERP.cef.register("auth", "loginPlayer", async (player, data) => {
     });
     if (characters.length > 0) {
         await (0, Character_event_1.spawnWithCharacter)(player, characters[0]);
+        _api_1.RAGERP.cef.startPage(player, "mainmenu");
+        _api_1.RAGERP.cef.emit(player, "system", "setPage", "mainmenu");
+        _api_1.RAGERP.cef.emit(player, "mainmenu", "setPlayerData", { name: characters[0].name });
     }
     else {
         player.call("client::auth:destroyCamera");
@@ -9404,10 +11313,10 @@ _api_1.RAGERP.cef.register("creator", "create", async (player, data) => {
     characterData.name = fullname;
     characterData.gender = sex;
     characterData.position = {
-        x: -541.0401611328125,
-        y: -1287.0777587890625,
-        z: 26.901586532592773,
-        heading: -118.70496368408203
+        x: 213.0,
+        y: -810.0,
+        z: 30.73,
+        heading: 160.0
     };
     const inv = Assets_module_1.inventorydataPresset;
     characterData.inventory = new Core_class_1.Inventory(player, inv.clothes, inv.pockets, inv.quickUse);
@@ -9478,31 +11387,198 @@ const invokeCommand = async (player, message) => {
         console.error(e);
     }
 };
-const sendChatMessage = (player, msg) => {
+const LOCAL_CHAT_RANGE = 50;
+const CHAT_PREFIXES = ["/global", "/team", "/local", "/admin"];
+function escapeHtml(s) {
+    return s
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+}
+function parseChatScope(message) {
+    const trimmed = message.trim();
+    const lower = trimmed.toLowerCase();
+    for (const prefix of CHAT_PREFIXES) {
+        if (lower === prefix || lower.startsWith(prefix + " ")) {
+            const msg = trimmed.slice(prefix.length).trim();
+            return { scope: prefix.slice(1), msg };
+        }
+    }
+    return null;
+}
+const sendChatMessage = (player, msg, scope = "local") => {
     try {
         msg = msg.trim();
     }
-    catch (err) {
+    catch {
         msg = msg;
     }
     if (msg.length <= 0)
         return;
-    mp.players.forEachInRange(player.position, 15, (target) => {
-        const sendText = `${player.getRoleplayName()} says: ${msg}`;
-        target.call("client::chat:newMessage", [sendText]);
-    });
+    const safeMsg = escapeHtml(msg);
+    const safeName = escapeHtml(player.getRoleplayName());
+    const scopeTag = scope === "all" ? "[GLOBAL]" : scope === "team" ? "[TEAM]" : scope === "admin" ? "[ADMIN]" : "[LOCAL]";
+    const formatted = `<span class="chat-scope">${scopeTag}</span> ${safeName}: ${safeMsg}`;
+    switch (scope) {
+        case "all":
+            mp.players.forEach((target) => {
+                if (target.getVariable("loggedin"))
+                    target.call("client::chat:newMessage", [formatted]);
+            });
+            break;
+        case "team": {
+            const playerTeam = player.getVariable("currentTeam");
+            mp.players.forEach((target) => {
+                if (target.getVariable("loggedin") && target.getVariable("currentTeam") === playerTeam) {
+                    target.call("client::chat:newMessage", [formatted]);
+                }
+            });
+            break;
+        }
+        case "admin": {
+            const adminLevel = player.getAdminLevel();
+            mp.players.forEach((target) => {
+                if (target.getVariable("loggedin") && target.getAdminLevel() >= 1) {
+                    target.call("client::chat:newMessage", [formatted]);
+                }
+            });
+            break;
+        }
+        case "local":
+        default:
+            mp.players.forEachInRange(player.position, LOCAL_CHAT_RANGE, (target) => {
+                if (target.getVariable("loggedin"))
+                    target.call("client::chat:newMessage", [formatted]);
+            });
+            break;
+    }
 };
 const invokeMessage = async (player, data) => {
-    const message = JSON.parse(data);
+    let message;
+    try {
+        const parsed = JSON.parse(data);
+        message = Array.isArray(parsed) ? parsed[0] : parsed;
+    }
+    catch {
+        message = data;
+    }
     player.call("client::chat:close");
+    if (message.length <= 0)
+        return;
+    const chatScope = parseChatScope(message);
+    if (chatScope) {
+        return sendChatMessage(player, chatScope.msg, chatScope.scope);
+    }
     if (message[0] === "/" && message.length > 1) {
         return invokeCommand(player, message);
     }
-    else {
-        return sendChatMessage(player, message);
-    }
+    return sendChatMessage(player, message, "local");
 };
 mp.events.add("server::chat:sendMessage", invokeMessage);
+
+
+/***/ },
+
+/***/ "./source/server/serverevents/DamageSync.event.ts"
+/*!********************************************************!*\
+  !*** ./source/server/serverevents/DamageSync.event.ts ***!
+  \********************************************************/
+(__unused_webpack_module, exports, __webpack_require__) {
+
+
+/**
+ * Server-authoritative damage sync.
+ * Receives hit reports from clients, validates, applies bone/weapon/distance damage,
+ * blocks team damage in arena, and notifies victim + shooter.
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const utils_module_1 = __webpack_require__(/*! @shared/utils.module */ "./source/shared/utils.module.ts");
+const ArenaMatch_manager_1 = __webpack_require__(/*! @arena/ArenaMatch.manager */ "./source/server/arena/ArenaMatch.manager.ts");
+const DEFAULT_BONE_MULT = 1;
+const DEFAULT_WEAPON_BASE = 28;
+const DEFAULT_WEAPON_MIN = 10;
+const DAMAGE_RANGE_DIVISOR = 40;
+const boneMultipliers = {
+    Head: 1.5,
+    Neck: 1.5,
+    Left_Clavicle: 1,
+    Right_Clavicle: 1,
+    "Upper_Arm Right": 1,
+    "Upper_Arm Left": 1,
+    "Lower_Arm Right": 1,
+    "Lower_Arm Left": 1,
+    Spine_1: 1,
+    Spine_3: 1,
+    Right_Tigh: 1,
+    Left_Tigh: 1,
+    Right_Calf: 1,
+    Left_Calf: 1,
+    Right_Food: 1,
+    Left_Food: 1
+};
+// baseDamage and minDamage (sync uses /10 scale)
+const weaponDamage = {
+    [String(mp.joaat("weapon_pistol"))]: { base: 20, min: 10 },
+    [String(mp.joaat("weapon_pistol_mk2"))]: { base: 20, min: 10 },
+    [String(mp.joaat("weapon_combatpistol"))]: { base: 20, min: 10 },
+    [String(mp.joaat("weapon_heavypistol"))]: { base: 20, min: 10 },
+    [String(mp.joaat("weapon_appistol"))]: { base: 20, min: 10 },
+    [String(mp.joaat("weapon_pistol50"))]: { base: 20, min: 10 },
+    [String(mp.joaat("weapon_microsmg"))]: { base: 20, min: 8 },
+    [String(mp.joaat("weapon_smg"))]: { base: 20, min: 8 },
+    [String(mp.joaat("weapon_assaultrifle"))]: { base: 28, min: 10 },
+    [String(mp.joaat("weapon_assaultrifle_mk2"))]: { base: 23, min: 10 },
+    [String(mp.joaat("weapon_carbinerifle"))]: { base: 23, min: 6 },
+    [String(mp.joaat("weapon_specialcarbine"))]: { base: 23, min: 10 },
+    [String(mp.joaat("weapon_sniperrifle"))]: { base: 40, min: 5 },
+    [String(mp.joaat("weapon_heavysniper"))]: { base: 40, min: 5 },
+    [String(mp.joaat("weapon_pumpshotgun"))]: { base: 30, min: 5 },
+    [String(mp.joaat("weapon_sawnoffshotgun"))]: { base: 30, min: 5 },
+    [String(mp.joaat("weapon_mg"))]: { base: 13, min: 5 }
+};
+function getBoneMultiplier(bone) {
+    return boneMultipliers[bone] ?? DEFAULT_BONE_MULT;
+}
+function getWeaponDamage(weaponHash, distance) {
+    const w = weaponDamage[weaponHash] ?? { base: DEFAULT_WEAPON_BASE, min: DEFAULT_WEAPON_MIN };
+    let dmg = w.base / (distance / DAMAGE_RANGE_DIVISOR);
+    if (dmg > w.base)
+        dmg = w.base;
+    if (dmg < w.min)
+        dmg = w.min;
+    return Math.round(dmg * 10) / 10;
+}
+mp.events.add("server:PlayerHit", (shooter, victimId, targetBone, weaponHash) => {
+    if (!shooter || !mp.players.exists(shooter))
+        return;
+    const victim = mp.players.at(victimId);
+    if (!victim || !mp.players.exists(victim))
+        return;
+    if (shooter.id === victim.id)
+        return;
+    // Arena: no team damage
+    const match = (0, ArenaMatch_manager_1.getMatchByPlayer)(victim);
+    if (match) {
+        const victimTeam = (0, ArenaMatch_manager_1.getTeam)(match, victim.id);
+        const shooterTeam = (0, ArenaMatch_manager_1.getTeam)(match, shooter.id);
+        if (victimTeam && shooterTeam && victimTeam === shooterTeam)
+            return;
+        // Must be in same dimension
+        if (shooter.dimension !== victim.dimension)
+            return;
+    }
+    const distance = utils_module_1.Utils.distanceToPos(shooter.position, victim.position);
+    const weaponDmg = getWeaponDamage(weaponHash, Math.max(1, distance));
+    const boneMult = getBoneMultiplier(targetBone);
+    const finalDamage = weaponDmg * boneMult;
+    const from = shooter.position;
+    victim.call("client:GiveDamage", [finalDamage, from.x, from.y, from.z]);
+    // Headshot: use body multiplier for damage calc but mark as head for hitmarker
+    const isHead = targetBone === "Head";
+    const hitStatus = isHead ? 3 : victim.armour > 0 ? 2 : 1; // 1=health, 2=armour, 3=head
+    shooter.call("client:ShowHitmarker", [finalDamage, victim.position.x, victim.position.y, victim.position.z, hitStatus]);
+});
 
 
 /***/ },
@@ -9515,25 +11591,10 @@ mp.events.add("server::chat:sendMessage", invokeMessage);
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.setPlayerToInjuredState = setPlayerToInjuredState;
 const PlayerSpawn_asset_1 = __webpack_require__(/*! @assets/PlayerSpawn.asset */ "./source/server/assets/PlayerSpawn.asset.ts");
 const utils_module_1 = __webpack_require__(/*! @shared/utils.module */ "./source/shared/utils.module.ts");
-const randomDeathAnimations = [
-    { dict: "missfinale_c1@", anim: "lying_dead_player0" },
-    { dict: "missprologueig_6", anim: "lying_dead_brad" },
-    { dict: "misslamar1dead_body", anim: "dead_idle" }
-];
-function setPlayerToInjuredState(player) {
-    if (!player || !mp.players.exists(player) || !player.character)
-        return;
-    player.character.deathState = 1 /* RageShared.Players.Enums.DEATH_STATES.STATE_INJURED */;
-    player.character.setStoreData(player, "isDead", true);
-    player.setVariable("isDead", true);
-    const randomDeath = randomDeathAnimations[Math.floor(Math.random() * randomDeathAnimations.length)];
-    player.playAnimation(randomDeath.dict, randomDeath.anim, 2, 9);
-    player.setOwnVariable("deathAnim", { anim: randomDeath.anim, dict: randomDeath.dict });
-    player.startScreenEffect("DeathFailMPIn", 0, true);
-}
+const ArenaMatch_manager_1 = __webpack_require__(/*! @arena/ArenaMatch.manager */ "./source/server/arena/ArenaMatch.manager.ts");
+const Death_utils_1 = __webpack_require__(/*! ./Death.utils */ "./source/server/serverevents/Death.utils.ts");
 function findClosestHospital(player) {
     let closestSpawn = null;
     let closestDistance = Infinity;
@@ -9565,13 +11626,16 @@ function playerAcceptedDeath(player) {
     player.character.deathState = 0 /* RageShared.Players.Enums.DEATH_STATES.STATE_NONE */;
     player.stopScreenEffect("DeathFailMPIn");
 }
-async function playerDeath(player, _reason, _killer) {
+function playerDeath(player, _reason, killer) {
     if (!player || !mp.players.exists(player) || !player.character)
         return;
+    if ((0, ArenaMatch_manager_1.isPlayerInArenaMatch)(player) && (0, ArenaMatch_manager_1.handleArenaDeath)(player, killer)) {
+        return;
+    }
     if (player.character.deathState === 0 /* RageShared.Players.Enums.DEATH_STATES.STATE_NONE */) {
         player.spawn(player.position);
-        setPlayerToInjuredState(player);
-        await player.character.save(player);
+        (0, Death_utils_1.setPlayerToInjuredState)(player);
+        player.character.save(player);
         return;
     }
     playerAcceptedDeath(player);
@@ -9579,6 +11643,35 @@ async function playerDeath(player, _reason, _killer) {
 }
 mp.events.add("playerDeath", playerDeath);
 mp.events.add("server::player:acceptDeath", playerAcceptedDeath);
+
+
+/***/ },
+
+/***/ "./source/server/serverevents/Death.utils.ts"
+/*!***************************************************!*\
+  !*** ./source/server/serverevents/Death.utils.ts ***!
+  \***************************************************/
+(__unused_webpack_module, exports) {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.setPlayerToInjuredState = setPlayerToInjuredState;
+const randomDeathAnimations = [
+    { dict: "missfinale_c1@", anim: "lying_dead_player0" },
+    { dict: "missprologueig_6", anim: "lying_dead_brad" },
+    { dict: "misslamar1dead_body", anim: "dead_idle" }
+];
+function setPlayerToInjuredState(player) {
+    if (!player || !mp.players.exists(player) || !player.character)
+        return;
+    player.character.deathState = 1 /* RageShared.Players.Enums.DEATH_STATES.STATE_INJURED */;
+    player.character.setStoreData(player, "isDead", true);
+    player.setVariable("isDead", true);
+    const randomDeath = randomDeathAnimations[Math.floor(Math.random() * randomDeathAnimations.length)];
+    player.playAnimation(randomDeath.dict, randomDeath.anim, 2, 9);
+    player.setOwnVariable("deathAnim", { anim: randomDeath.anim, dict: randomDeath.dict });
+    player.startScreenEffect("DeathFailMPIn", 0, true);
+}
 
 
 /***/ },
@@ -9688,6 +11781,86 @@ mp.events.add("server::player:weaponShot", async (player) => {
 
 /***/ },
 
+/***/ "./source/server/serverevents/MainMenu.event.ts"
+/*!******************************************************!*\
+  !*** ./source/server/serverevents/MainMenu.event.ts ***!
+  \******************************************************/
+(__unused_webpack_module, exports, __webpack_require__) {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const _api_1 = __webpack_require__(/*! @api */ "./source/server/api/index.ts");
+const Arena_module_1 = __webpack_require__(/*! @arena/Arena.module */ "./source/server/arena/Arena.module.ts");
+const ArenaPresets_asset_1 = __webpack_require__(/*! @arena/ArenaPresets.asset */ "./source/server/arena/ArenaPresets.asset.ts");
+const ArenaMatch_manager_1 = __webpack_require__(/*! @arena/ArenaMatch.manager */ "./source/server/arena/ArenaMatch.manager.ts");
+const Character_entity_1 = __webpack_require__(/*! @entities/Character.entity */ "./source/server/database/entity/Character.entity.ts");
+const ArenaConfig_1 = __webpack_require__(/*! @arena/ArenaConfig */ "./source/server/arena/ArenaConfig.ts");
+_api_1.RAGERP.cef.register("mainmenu", "playFreeroam", async (player) => {
+    if (!player.character) {
+        _api_1.RAGERP.cef.emit(player, "mainmenu", "playError", { message: "No character loaded." });
+        return;
+    }
+    if ((0, ArenaMatch_manager_1.isPlayerInArenaMatch)(player)) {
+        (0, ArenaMatch_manager_1.leaveMatch)(player, false);
+    }
+    const LEGION_SQUARE = { x: 213.0, y: -810.0, z: 30.73, heading: 160.0 };
+    player.dimension = 0;
+    player.setVariable("isSpectating", false);
+    player.call("client::player:freeze", [false]);
+    player.call("client::arena:zoneClear");
+    player.call("client::arena:clearTeam");
+    player.spawn(new mp.Vector3(LEGION_SQUARE.x, LEGION_SQUARE.y, LEGION_SQUARE.z));
+    player.heading = LEGION_SQUARE.heading;
+    await _api_1.RAGERP.database.getRepository(Character_entity_1.CharacterEntity).update(player.character.id, {
+        position: LEGION_SQUARE,
+        lastlogin: player.character.lastlogin,
+        deathState: player.character.deathState,
+        cash: player.character.cash
+    });
+    player.call("client::cef:close");
+    _api_1.RAGERP.cef.emit(player, "system", "setPage", "hud");
+});
+_api_1.RAGERP.cef.register("mainmenu", "openSettings", (player) => {
+    _api_1.RAGERP.cef.startPage(player, "settings");
+    _api_1.RAGERP.cef.emit(player, "system", "setPage", "settings");
+});
+_api_1.RAGERP.cef.register("mainmenu", "getArenaMaps", (player) => {
+    const presets = (0, ArenaPresets_asset_1.getArenaPresets)();
+    _api_1.RAGERP.cef.emit(player, "mainmenu", "setArenaMaps", {
+        maps: presets.map((p) => ({ id: p.id, name: p.name }))
+    });
+});
+_api_1.RAGERP.cef.register("mainmenu", "playArena", async (player, data) => {
+    if (!player.character) {
+        _api_1.RAGERP.cef.emit(player, "mainmenu", "playError", { message: "No character loaded." });
+        return;
+    }
+    let size = 2;
+    let mapId;
+    try {
+        const parsed = data ? (typeof data === "string" ? JSON.parse(data) : data) : null;
+        if (parsed && typeof parsed === "object" && parsed.size) {
+            const s = Number(parsed.size);
+            if (ArenaConfig_1.QUEUE_SIZES.includes(s))
+                size = s;
+        }
+        if (parsed && typeof parsed === "object" && parsed.map) {
+            mapId = String(parsed.map);
+        }
+    }
+    catch { /* default */ }
+    if ((0, Arena_module_1.joinQueue)(player, size, mapId)) {
+        _api_1.RAGERP.cef.startPage(player, "arena_lobby");
+        _api_1.RAGERP.cef.emit(player, "system", "setPage", "arena_lobby");
+    }
+    else {
+        _api_1.RAGERP.cef.emit(player, "mainmenu", "playError", { message: "Could not join queue. You may already be in it." });
+    }
+});
+
+
+/***/ },
+
 /***/ "./source/server/serverevents/Player.event.ts"
 /*!****************************************************!*\
   !*** ./source/server/serverevents/Player.event.ts ***!
@@ -9700,6 +11873,8 @@ const _api_1 = __webpack_require__(/*! @api */ "./source/server/api/index.ts");
 const Ban_entity_1 = __webpack_require__(/*! @entities/Ban.entity */ "./source/server/database/entity/Ban.entity.ts");
 const Character_entity_1 = __webpack_require__(/*! @entities/Character.entity */ "./source/server/database/entity/Character.entity.ts");
 const Attachments_module_1 = __webpack_require__(/*! @modules/Attachments.module */ "./source/server/modules/Attachments.module.ts");
+const ArenaMatch_manager_1 = __webpack_require__(/*! @arena/ArenaMatch.manager */ "./source/server/arena/ArenaMatch.manager.ts");
+const LEGION_SQUARE = { x: 213.0, y: -810.0, z: 30.73, heading: 160.0 };
 async function onPlayerJoin(player) {
     try {
         const banData = await _api_1.RAGERP.database.getRepository(Ban_entity_1.BanEntity).findOne({
@@ -9729,16 +11904,29 @@ async function onPlayerJoin(player) {
     }
 }
 async function onPlayerQuit(player) {
+    if ((0, ArenaMatch_manager_1.isPlayerInArenaMatch)(player)) {
+        (0, ArenaMatch_manager_1.leaveMatch)(player);
+    }
     const character = player.character;
     if (!character)
         return;
-    const lastPosition = { ...player.position };
-    await _api_1.RAGERP.database.getRepository(Character_entity_1.CharacterEntity).update(character.id, {
-        position: { x: lastPosition.x, y: lastPosition.y, z: lastPosition.z, heading: player.heading },
-        lastlogin: character.lastlogin,
-        deathState: character.deathState,
-        cash: character.cash
-    });
+    if (player.dimension !== 0) {
+        await _api_1.RAGERP.database.getRepository(Character_entity_1.CharacterEntity).update(character.id, {
+            position: LEGION_SQUARE,
+            lastlogin: character.lastlogin,
+            deathState: character.deathState,
+            cash: character.cash
+        });
+    }
+    else {
+        const lastPosition = { ...player.position };
+        await _api_1.RAGERP.database.getRepository(Character_entity_1.CharacterEntity).update(character.id, {
+            position: { x: lastPosition.x, y: lastPosition.y, z: lastPosition.z, heading: player.heading },
+            lastlogin: character.lastlogin,
+            deathState: character.deathState,
+            cash: character.cash
+        });
+    }
 }
 mp.events.add({
     "playerQuit": onPlayerQuit,
@@ -9762,6 +11950,36 @@ mp.events.add("entityCreated", (entity) => {
     }
 });
 _api_1.RAGERP.cef.register("settings", "changePassword", (player) => { });
+
+
+/***/ },
+
+/***/ "./source/server/serverevents/PlayerMenu.event.ts"
+/*!********************************************************!*\
+  !*** ./source/server/serverevents/PlayerMenu.event.ts ***!
+  \********************************************************/
+(__unused_webpack_module, exports, __webpack_require__) {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const _api_1 = __webpack_require__(/*! @api */ "./source/server/api/index.ts");
+mp.events.add("server::playerMenu:close", (player) => {
+    if (!player || !mp.players.exists(player))
+        return;
+    player.call("client::cef:close");
+});
+mp.events.add("server::player:setCefPage", (player, pageName) => {
+    if (!player || !mp.players.exists(player))
+        return;
+    if (pageName !== "playerMenu")
+        return;
+    const players = mp.players.toArray().map((p) => ({
+        id: p.id,
+        name: p.name,
+        ping: p.ping
+    }));
+    _api_1.RAGERP.cef.emit(player, "playerList", "setPlayers", players);
+});
 
 
 /***/ },
@@ -9883,6 +12101,82 @@ mp.events.add("server::interaction:vehicle", async (player, vehicleId) => {
             return player.interactionMenu?.closeMenu(player);
     }
     player.interactionMenu?.closeMenu(player);
+});
+
+
+/***/ },
+
+/***/ "./source/server/serverevents/Wardrobe.event.ts"
+/*!******************************************************!*\
+  !*** ./source/server/serverevents/Wardrobe.event.ts ***!
+  \******************************************************/
+(__unused_webpack_module, exports, __webpack_require__) {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const _api_1 = __webpack_require__(/*! @api */ "./source/server/api/index.ts");
+const Character_entity_1 = __webpack_require__(/*! @entities/Character.entity */ "./source/server/database/entity/Character.entity.ts");
+const CEFEvent_class_1 = __webpack_require__(/*! @classes/CEFEvent.class */ "./source/server/classes/CEFEvent.class.ts");
+function getClothesForPlayer(player) {
+    const clothes = player.character?.appearance?.clothes ?? {
+        hats: { drawable: 0, texture: 0 },
+        masks: { drawable: 0, texture: 0 },
+        tops: { drawable: 15, texture: 0 },
+        pants: { drawable: 21, texture: 0 },
+        shoes: { drawable: 34, texture: 0 }
+    };
+    if (player.character?.gender === 1) {
+        clothes.pants = clothes.pants ?? { drawable: 15, texture: 0 };
+        clothes.shoes = clothes.shoes ?? { drawable: 35, texture: 0 };
+    }
+    return clothes;
+}
+function openWardrobe(player) {
+    if (!player.character)
+        return player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "You must be logged in.");
+    const clothes = getClothesForPlayer(player);
+    CEFEvent_class_1.CefEvent.emit(player, "wardrobe", "setClothes", clothes);
+    _api_1.RAGERP.cef.startPage(player, "wardrobe");
+    _api_1.RAGERP.cef.emit(player, "system", "setPage", "wardrobe");
+}
+_api_1.RAGERP.commands.add({
+    name: "clothing",
+    aliases: ["clothes"],
+    description: "Open clothing menu to change clothes",
+    run: (player) => openWardrobe(player)
+});
+_api_1.RAGERP.cef.register("wardrobe", "open", async (player) => openWardrobe(player));
+_api_1.RAGERP.cef.register("wardrobe", "getClothes", async (player) => {
+    if (!player.character)
+        return;
+    const clothes = getClothesForPlayer(player);
+    CEFEvent_class_1.CefEvent.emit(player, "wardrobe", "setClothes", clothes);
+});
+_api_1.RAGERP.cef.register("wardrobe", "save", async (player, data) => {
+    if (!player.character)
+        return;
+    const clothes = _api_1.RAGERP.utils.parseObject(data);
+    player.character.appearance.clothes = clothes;
+    await _api_1.RAGERP.database.getRepository(Character_entity_1.CharacterEntity).update(player.character.id, {
+        appearance: player.character.appearance
+    });
+    player.call("client::wardrobe:applyClothes", [JSON.stringify(clothes)]);
+    player.call("client::cef:close");
+    player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, "Outfit saved!");
+});
+_api_1.RAGERP.cef.register("wardrobe", "saveInline", async (player, data) => {
+    if (!player.character)
+        return;
+    const clothes = _api_1.RAGERP.utils.parseObject(data);
+    player.character.appearance.clothes = clothes;
+    await _api_1.RAGERP.database.getRepository(Character_entity_1.CharacterEntity).update(player.character.id, {
+        appearance: player.character.appearance
+    });
+    player.call("client::wardrobe:applyClothes", [JSON.stringify(clothes)]);
+    player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, "Outfit saved!");
+});
+_api_1.RAGERP.cef.register("wardrobe", "close", async (player) => {
+    player.call("client::cef:close");
 });
 
 
@@ -10133,6 +12427,16 @@ module.exports = require("fs");
 
 /***/ },
 
+/***/ "path"
+/*!***********************!*\
+  !*** external "path" ***!
+  \***********************/
+(module) {
+
+module.exports = require("path");
+
+/***/ },
+
 /***/ "./source/shared/json/femaleTorso.json"
 /*!*********************************************!*\
   !*** ./source/shared/json/femaleTorso.json ***!
@@ -10222,8 +12526,14 @@ __webpack_require__(/*! @events/Character.event */ "./source/server/serverevents
 __webpack_require__(/*! @events/Player.event */ "./source/server/serverevents/Player.event.ts");
 __webpack_require__(/*! @events/Inventory.event */ "./source/server/serverevents/Inventory.event.ts");
 __webpack_require__(/*! @events/Death.event */ "./source/server/serverevents/Death.event.ts");
+__webpack_require__(/*! @events/DamageSync.event */ "./source/server/serverevents/DamageSync.event.ts");
 __webpack_require__(/*! @events/Vehicle.event */ "./source/server/serverevents/Vehicle.event.ts");
 __webpack_require__(/*! @events/Point.event */ "./source/server/serverevents/Point.event.ts");
+__webpack_require__(/*! @events/Wardrobe.event */ "./source/server/serverevents/Wardrobe.event.ts");
+__webpack_require__(/*! @events/MainMenu.event */ "./source/server/serverevents/MainMenu.event.ts");
+__webpack_require__(/*! @events/PlayerMenu.event */ "./source/server/serverevents/PlayerMenu.event.ts");
+__webpack_require__(/*! @arena/ArenaMatch.manager */ "./source/server/arena/ArenaMatch.manager.ts");
+__webpack_require__(/*! @events/Arena.event */ "./source/server/serverevents/Arena.event.ts");
 //---------------------------------------//
 const colorette_1 = __webpack_require__(/*! colorette */ "colorette");
 //---------------------------------------//

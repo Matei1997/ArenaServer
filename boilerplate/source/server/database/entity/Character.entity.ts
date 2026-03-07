@@ -4,7 +4,7 @@ import { Inventory } from "@modules/inventory/Core.class";
 import { CefEvent } from "@classes/CEFEvent.class";
 import { CommandRegistry } from "@classes/Command.class";
 import { AccountEntity } from "./Account.entity";
-import { setPlayerToInjuredState } from "@events/Death.event";
+import { setPlayerToInjuredState } from "@events/Death.utils";
 import { RageShared } from "@shared/index";
 import { BankAccountEntity } from "@entities/Bank.entity";
 
@@ -15,9 +15,6 @@ export class CharacterEntity {
 
     @ManyToOne(() => AccountEntity, (account) => account.id)
     account: AccountEntity;
-
-    @Column({ type: "int", width: 11, default: 0 })
-    adminlevel: number = 0;
 
     @Column({ type: "jsonb", default: null })
     appearance: Omit<RageShared.Players.Interfaces.CreatorData, "name" | "sex"> = {
@@ -103,12 +100,16 @@ export class CharacterEntity {
         const { x, y, z, heading } = player.character.position;
 
         player.character.applyAppearance(player);
+        const clothes = (player.character.appearance as any).clothes;
+        if (clothes) {
+            player.call("client::wardrobe:applyClothes", [JSON.stringify(clothes)]);
+        }
         player.character.loadInventory(player);
 
         player.character.setStoreData(player, "ping", player.ping);
         player.character.setStoreData(player, "wantedLevel", player.character.wantedLevel);
 
-        player.setVariable("adminLevel", player.character.adminlevel);
+        player.setVariable("adminLevel", player.account?.adminlevel ?? 0);
 
         CefEvent.emit(player, "player", "setKeybindData", { I: "Open Inventory", ALT: "Interaction" });
 
@@ -121,8 +122,8 @@ export class CharacterEntity {
             setPlayerToInjuredState(player);
         }
         player.outputChatBox(`Welcome to !{red}RAGEMP ROLEPLAY!{white} ${player.name}!`);
-        if (player.character.adminlevel) {
-            player.outputChatBox(`>>> You are logged in as !{green}LEVEL ${player.character.adminlevel}!{white} admin!`);
+        if (player.account?.adminlevel) {
+            player.outputChatBox(`>>> You are logged in as !{green}LEVEL ${player.account.adminlevel}!{white} admin!`);
         }
 
         player.character.setStoreData(player, "cash", player.character.cash);

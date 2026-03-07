@@ -6,6 +6,9 @@ export class AccountEntity {
     @PrimaryGeneratedColumn()
     readonly id: number;
 
+    @Column({ type: "int", width: 11, default: 0 })
+    adminlevel: number = 0;
+
     @Column({ type: "varchar", length: 32 })
     username: string;
 

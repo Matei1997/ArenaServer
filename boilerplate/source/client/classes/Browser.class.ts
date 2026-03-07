@@ -2,7 +2,7 @@ import { Utils } from "@shared/Utils.module";
 import { CEFPages } from "@assets/CEFPages.asset";
 
 const disabledControls = [
-    0, 30, 31, 21, 36, 22, 44, 38, 71, 72, 59, 60, 42, 43, 85, 86, 75, 15, 14, 228, 37, 229, 348, 156, 199, 204, 172, 173, 37, 199, 44, 178, 244, 220, 221, 218, 219, 16, 17, 200, 202, 322
+    0, 30, 31, 21, 36, 22, 44, 38, 71, 72, 59, 60, 42, 43, 85, 86, 75, 15, 14, 228, 229, 348, 156, 199, 204, 172, 173, 199, 44, 178, 244, 220, 221, 218, 219, 16, 17, 200, 202, 322
 ];
 
 /**
@@ -12,6 +12,10 @@ class _Browser {
     private readonly url: string = "http://package2/dist/index.html";
     mainUI: BrowserMp;
     currentPage: string | undefined;
+    /** When true (right-click held in wardrobe), hide cursor to allow camera orbit */
+    wardrobeCameraHeld: boolean = false;
+    /** When true (F2 pressed), show cursor for clicking UI like "leave" in hopouts */
+    cursorOverrideForClick: boolean = false;
 
     /**
      * Initializes the browser and sets up event handlers.
@@ -46,8 +50,20 @@ class _Browser {
     onTick() {
         mp.game.controls.applyDisableControlActionBatch();
         if (this.currentPage) {
+            const params = CEFPages[this.currentPage];
+            const showCursor =
+                (params?.cursor !== false || this.cursorOverrideForClick) &&
+                !(this.currentPage === "wardrobe" && this.wardrobeCameraHeld);
+            mp.gui.cursor.show(showCursor, showCursor);
+        } else if (this.cursorOverrideForClick) {
             mp.gui.cursor.show(true, true);
         }
+    }
+
+    /** Toggles cursor visibility for clicking UI (e.g. "leave" in hopouts). Resets when page closes. */
+    toggleCursorForClick(): boolean {
+        this.cursorOverrideForClick = !this.cursorOverrideForClick;
+        return this.cursorOverrideForClick;
     }
 
     /**
@@ -73,7 +89,7 @@ class _Browser {
             this.startPage(args[0]);
         }
 
-        if (this.mainUI && eventName.indexOf("cef::") != -1) {
+        if (this.mainUI && eventName.includes("cef::")) {
             const event = eventName.split("cef::")[1];
             const argsString = args.map((arg: string) => JSON.stringify(arg)).join(", ");
 
@@ -94,6 +110,8 @@ class _Browser {
 
         const pageData = CEFPages[page];
         this.currentPage = undefined;
+        this.wardrobeCameraHeld = false;
+        this.cursorOverrideForClick = false;
 
         mp.events.callRemote("server::player:closeCEF", page);
         if (pageData.blur) {
@@ -119,9 +137,13 @@ class _Browser {
         const params = CEFPages[pageName];
 
         if (typeof params.radar !== "undefined") mp.game.ui.displayRadar(params.radar);
-        if (params.controls) mp.game.controls.setDisableControlActionBatch(false, disabledControls);
+        if (params.controls) {
+            mp.game.controls.setDisableControlActionBatch(false, disabledControls);
+        } else {
+            mp.game.controls.setDisableControlActionBatch(false, []);
+        }
         if (params.freezeCamera) mp.players.local.freezePosition(params.freezeCamera);
-        mp.gui.cursor.show(true, true);
+        mp.gui.cursor.show(params.cursor !== false, params.cursor !== false);
 
         setTimeout(() => {
             if (params.blur) {

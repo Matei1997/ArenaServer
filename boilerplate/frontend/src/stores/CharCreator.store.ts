@@ -33,6 +33,10 @@ const defaultData = {
             drawable: 0 as number,
             texture: 0 as number,
         },
+        masks: {
+            drawable: 0 as number,
+            texture: 0 as number,
+        },
         tops: {
             drawable: 0 as number,
             texture: 0 as number,

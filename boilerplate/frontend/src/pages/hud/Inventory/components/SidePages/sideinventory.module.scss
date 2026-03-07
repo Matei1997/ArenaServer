@@ -80,7 +80,7 @@
             justify-content: center;
             border-radius: .3vh;
             background-color: $global-color;
-            border: 0.18518518518518517vh solid grey;
+            border: 0.18vh solid rgba(255, 255, 255, 0.1);
             border-radius: 1vh;
 
             text-shadow: 0 0.18518518518518517vh 0.18518518518518517vh rgba(0, 0, 0, 0.53);
@@ -131,7 +131,7 @@
             overflow: hidden;
 
             background-color: $global-color;
-            border: 0.18518518518518517vh solid grey;
+            border: 0.18vh solid rgba(255, 255, 255, 0.1);
             //  border-radius: .5vh;
 
             &::before {
@@ -150,7 +150,7 @@
             position: absolute;
             top: 60%;
 
-            background: linear-gradient(to right, #28272b, #ff000085);
+            background: linear-gradient(to right, $global-color, rgba(254, 42, 42, 0.5));
 
 
             width: 100%;

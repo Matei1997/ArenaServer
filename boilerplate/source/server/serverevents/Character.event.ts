@@ -72,10 +72,10 @@ RAGERP.cef.register("creator", "create", async (player, data) => {
     characterData.gender = sex;
 
     characterData.position = {
-        x: -541.0401611328125,
-        y: -1287.0777587890625,
-        z: 26.901586532592773,
-        heading: -118.70496368408203
+        x: 213.0,
+        y: -810.0,
+        z: 30.73,
+        heading: 160.0
     };
 
     const inv = inventorydataPresset;

@@ -25,8 +25,14 @@ import "@events/Character.event";
 import "@events/Player.event";
 import "@events/Inventory.event";
 import "@events/Death.event";
+import "@events/DamageSync.event";
 import "@events/Vehicle.event";
 import "@events/Point.event";
+import "@events/Wardrobe.event";
+import "@events/MainMenu.event";
+import "@events/PlayerMenu.event";
+import "@arena/ArenaMatch.manager";
+import "@events/Arena.event";
 //---------------------------------------//
 import { blue, green, yellow } from "colorette";
 import { v4 } from "uuid";

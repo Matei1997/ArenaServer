@@ -1,7 +1,25 @@
-$global-color: #28272b;
-$global-bg: linear-gradient(to right, red, #28272b);
-$global-bg-reverted: linear-gradient(to right, #28272b, red);
-$global-bg-transparent: linear-gradient(to right, #28272b, transparent);
-$global-bg-transparent-reverted: linear-gradient(to left, #28272b, transparent);
+$global-color: #0a0a0e;
+$global-bg: linear-gradient(180deg, rgba(48, 25, 52, 0.3) 0%, rgba(10, 10, 14, 1) 100%);
+$global-bg-reverted: linear-gradient(180deg, rgba(10, 10, 14, 1) 0%, rgba(48, 25, 52, 0.3) 100%);
+$global-bg-transparent: linear-gradient(to right, #0a0a0e, transparent);
+$global-bg-transparent-reverted: linear-gradient(to left, #0a0a0e, transparent);
 
-$global-font: 'Beast Duh'; //idk tbh? gotta change it soon anyway
+$global-font: "Poppins", "Segoe UI", Arial, sans-serif;
+
+$accent: #591b87;
+$accent-light: #7b3fa0;
+$accent-dim: rgba(89, 27, 135, 0.2);
+$accent-glow: rgba(89, 27, 135, 0.4);
+$accent-deep: #301934;
+
+$hud-card-bg: rgba(10, 10, 14, 0.9);
+$hud-accent: $accent;
+$hud-accent-dim: $accent-dim;
+$hud-border: rgba(255, 255, 255, 0.08);
+$hud-text: #fff;
+$hud-text-muted: rgba(255, 255, 255, 0.5);
+$hud-radial: radial-gradient(ellipse at center right, rgba(0, 0, 0, 0.6) 0%, transparent 70%);
+
+$success: #5cff80;
+$danger: #fe2a2a;
+$warning: #ffcd4d;
