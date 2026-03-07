@@ -11,15 +11,20 @@ let zoneBlip: number | null = null;
 let zonePhase = 0;
 let zoneTotalPhases = 0;
 let zonePhaseTimeLeft = 0;
+let zonePhaseUpdatedAt = 0;
 let lastWarnPhase = -1;
 let warnUntil = 0;
 let stormAlpha = 0;
 let lastStormSoundAt = 0;
 
-const ZONE_SEGMENTS = 72;
-const ZONE_COLOR = { r: 90, g: 130, b: 220, a: 50 };
-const ZONE_GLOW_COLOR = { r: 120, g: 170, b: 255, a: 25 };
-const ZONE_WALL_HEIGHT = 30;
+const ZONE_SEGMENTS = 96;
+const ZONE_COLOR = { r: 120, g: 170, b: 255, a: 35 };
+const ZONE_GLOW_COLOR = { r: 140, g: 190, b: 255, a: 18 };
+const ZONE_WALL_HEIGHT = 34;
+const STORM_COLOR = { r: 120, g: 80, b: 220, a: 110 };
+const STORM_WALL_HEIGHT = 55;
+const STORM_RING_MAX_OFFSET = 45;
+const STORM_RING_SPEED = 1.4;
 const STORM_WARN_SECONDS = 10;
 const STORM_OVERLAY = { r: 70, g: 105, b: 185 };
 
@@ -38,6 +43,7 @@ mp.events.add("client::arena:zoneInit", (cx: number, cy: number, radius: number)
     zoneCenterX = safeX;
     zoneCenterY = safeY;
     zoneRadius = safeRadius;
+    zonePhaseUpdatedAt = Date.now();
 
     if (zoneBlip) {
         try { (mp.game.ui as any).removeBlip(zoneBlip); } catch {}
@@ -45,7 +51,7 @@ mp.events.add("client::arena:zoneInit", (cx: number, cy: number, radius: number)
     zoneBlip = (mp.game.ui as any).addBlipForRadius(safeX, safeY, safeRadius);
     if (zoneBlip) {
         (mp.game.ui as any).setBlipColour(zoneBlip, 3);
-        (mp.game.ui as any).setBlipAlpha(zoneBlip, 20);
+        (mp.game.ui as any).setBlipAlpha(zoneBlip, 90);
     }
 });
 
@@ -66,6 +72,7 @@ mp.events.add("client::arena:zoneUpdate", (
     zonePhase = phase;
     zoneTotalPhases = totalPhases;
     zonePhaseTimeLeft = timeLeft;
+    zonePhaseUpdatedAt = Date.now();
 
     if (zonePhaseTimeLeft <= STORM_WARN_SECONDS && lastWarnPhase !== zonePhase) {
         lastWarnPhase = zonePhase;
@@ -79,7 +86,7 @@ mp.events.add("client::arena:zoneUpdate", (
     zoneBlip = (mp.game.ui as any).addBlipForRadius(safeX, safeY, safeRadius);
     if (zoneBlip) {
         (mp.game.ui as any).setBlipColour(zoneBlip, 3);
-        (mp.game.ui as any).setBlipAlpha(zoneBlip, 20);
+        (mp.game.ui as any).setBlipAlpha(zoneBlip, 90);
     }
 });
 
@@ -88,6 +95,7 @@ mp.events.add("client::arena:zoneClear", () => {
     zonePhase = 0;
     zoneTotalPhases = 0;
     zonePhaseTimeLeft = 0;
+    zonePhaseUpdatedAt = 0;
     lastWarnPhase = -1;
     warnUntil = 0;
     stormAlpha = 0;
@@ -112,6 +120,11 @@ mp.events.add("render", () => {
 
     const pulse = (Math.sin(Date.now() / 450) + 1) * 0.5;
     const glowAlpha = Math.floor(ZONE_GLOW_COLOR.a + pulse * 20);
+    const phaseElapsed = zonePhaseUpdatedAt ? Math.floor((Date.now() - zonePhaseUpdatedAt) / 1000) : 0;
+    const phaseTimeLeft = Math.max(0, zonePhaseTimeLeft - phaseElapsed);
+    const stormOffset = Math.min(STORM_RING_MAX_OFFSET, phaseTimeLeft * STORM_RING_SPEED);
+    const stormRadius = zoneRadius + stormOffset;
+    const stormRingAlpha = Math.floor(STORM_COLOR.a + pulse * 50);
 
     for (let i = 0; i < ZONE_SEGMENTS; i++) {
         const angle1 = (i / ZONE_SEGMENTS) * Math.PI * 2;
@@ -138,6 +151,21 @@ mp.events.add("render", () => {
 
         mp.game.graphics.drawLine(xg1, yg1, groundZ, xg2, yg2, groundZ,
             ZONE_GLOW_COLOR.r, ZONE_GLOW_COLOR.g, ZONE_GLOW_COLOR.b, glowAlpha);
+
+        if (stormOffset > 0.1) {
+            const sx1 = zoneCenterX + Math.cos(angle1) * stormRadius;
+            const sy1 = zoneCenterY + Math.sin(angle1) * stormRadius;
+            const sx2 = zoneCenterX + Math.cos(angle2) * stormRadius;
+            const sy2 = zoneCenterY + Math.sin(angle2) * stormRadius;
+            const stormTopZ = groundZ + STORM_WALL_HEIGHT;
+
+            mp.game.graphics.drawLine(sx1, sy1, groundZ, sx2, sy2, groundZ,
+                STORM_COLOR.r, STORM_COLOR.g, STORM_COLOR.b, stormRingAlpha);
+            mp.game.graphics.drawLine(sx1, sy1, groundZ, sx1, sy1, stormTopZ,
+                STORM_COLOR.r, STORM_COLOR.g, STORM_COLOR.b, Math.floor(stormRingAlpha * 0.35));
+            mp.game.graphics.drawLine(sx1, sy1, stormTopZ, sx2, sy2, stormTopZ,
+                STORM_COLOR.r, STORM_COLOR.g, STORM_COLOR.b, Math.floor(stormRingAlpha * 0.25));
+        }
     }
 
     if (isOutside) {

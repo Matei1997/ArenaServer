@@ -12,7 +12,7 @@ interface ICefPages {
 }
 const CEFPages: ICefPages = {
     chat: { blur: false, radar: true, pause: true, controls: true, close: false },
-    auth: { blur: true, radar: false, pause: false, controls: true, close: false },
+    auth: { blur: false, radar: false, pause: false, controls: true, close: false },
     creator: { blur: false, radar: false, pause: false, controls: true, close: true },
     selectcharacter: { blur: true, radar: false, pause: false, controls: true, close: false },
     hud: { blur: false, radar: true, pause: false, controls: true, close: false },
@@ -22,7 +22,7 @@ const CEFPages: ICefPages = {
     settings: { blur: true, radar: false, pause: true, controls: true, close: true },
     playerMenu: { blur: true, radar: false, pause: true, controls: true, close: true },
     wardrobe: { blur: false, radar: true, pause: false, controls: false, close: true },
-    mainmenu: { blur: true, radar: false, pause: false, controls: true, close: true, freezeCamera: false },
+    mainmenu: { blur: false, radar: false, pause: false, controls: true, close: true, freezeCamera: false },
     arena_lobby: { blur: true, radar: false, pause: false, controls: true, close: true },
     arena_voting: { blur: true, radar: false, pause: false, controls: true, close: true },
     arena_hud: { blur: false, radar: true, pause: false, controls: false, close: false, cursor: false },

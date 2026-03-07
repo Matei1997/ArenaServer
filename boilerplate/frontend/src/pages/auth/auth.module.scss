@@ -1,16 +1,14 @@
 @import "../../styles/vars";
 
 .main {
-    position: absolute;
-    width: 100vw;
-    height: 100vh;
-    background: linear-gradient(270deg, rgba(0, 0, 0, 0.9) 0%, #010101 100%);
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 2, 6, 0.45);
     font-family: $global-font;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     z-index: 1;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
 
     &::before {
         position: absolute;
@@ -25,13 +23,13 @@
     .authform {
         position: relative;
         z-index: 1;
-        width: 42vh;
+        width: 44vh;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         padding: 5vh 4vh;
-        background: rgba(10, 10, 10, 0.85);
+        background: rgba(10, 10, 14, 0.9);
         border: 1px solid rgba(255, 255, 255, 0.06);
         border-radius: 1.2vh;
         backdrop-filter: blur(20px);
@@ -160,4 +158,145 @@
             }
         }
     }
+}
+
+.navBar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 7.5vh;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 3.5vh;
+    background: rgba(4, 4, 5, 0.85);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid $hud-border;
+    z-index: 2;
+}
+
+.logo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1vh;
+
+    .logoMain {
+        font-size: 2vh;
+        font-weight: 700;
+        color: $hud-text;
+        letter-spacing: 0.25em;
+    }
+
+    .logoSub {
+        font-size: 0.9vh;
+        font-weight: 500;
+        color: $accent-light;
+        letter-spacing: 0.15em;
+    }
+}
+
+.navRight {
+    display: flex;
+    align-items: center;
+}
+
+.navHint {
+    font-size: 1.1vh;
+    letter-spacing: 0.2em;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.authLayout {
+    position: absolute;
+    inset: 0;
+    padding: 12vh 4vh 4vh;
+    display: grid;
+    grid-template-columns: 1fr 34vh;
+    gap: 3vh;
+    z-index: 1;
+}
+
+.leftCol {
+    display: flex;
+    flex-direction: column;
+    gap: 3vh;
+    max-width: 60vh;
+}
+
+.rightCol {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.welcome {
+    display: flex;
+    flex-direction: column;
+    gap: 1vh;
+    max-width: 52vh;
+}
+
+.welcomeTitle {
+    font-size: 3.6vh;
+    font-weight: 700;
+    letter-spacing: 0.4em;
+    color: $hud-text;
+}
+
+.welcomeSubtitle {
+    font-size: 1.2vh;
+    letter-spacing: 0.2em;
+    color: $accent-light;
+}
+
+.welcomeText {
+    font-size: 1.3vh;
+    line-height: 1.6;
+    color: $hud-text-muted;
+    margin: 0;
+}
+
+.profileCard {
+    width: 100%;
+    padding: 2vh;
+    background: rgba(10, 10, 14, 0.92);
+    backdrop-filter: blur(16px);
+    border: 1px solid $hud-border;
+    border-radius: 1.4vh;
+    display: flex;
+    flex-direction: column;
+    gap: 1vh;
+}
+
+.profileTitle {
+    font-size: 1.1vh;
+    letter-spacing: 0.15em;
+    color: $hud-text-muted;
+}
+
+.profileName {
+    font-size: 1.8vh;
+    font-weight: 700;
+    color: $hud-text;
+}
+
+.profileRank {
+    font-size: 1.1vh;
+    color: $accent-light;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+}
+
+.profileStats {
+    font-size: 1.1vh;
+    color: $hud-text-muted;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4vh;
+}
+
+.profileFooter {
+    margin-top: auto;
+    font-size: 1.1vh;
+    color: rgba(255, 255, 255, 0.45);
 }

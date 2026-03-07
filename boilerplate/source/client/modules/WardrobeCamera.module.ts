@@ -31,6 +31,8 @@ mp.events.add("client::wardrobeCamera:start", () => {
 
     player.setAlpha(255);
     player.setVisible(true, false);
+    mp.game.entity.setVisible(player.handle, true, false);
+    player.setCollision(true, false);
 
     mp.game.streaming.requestCollisionAtCoord(WARDROBE_CAM_POS.x, WARDROBE_CAM_POS.y, WARDROBE_CAM_POS.z);
     mp.game.streaming.requestAdditionalCollisionAtCoord(WARDROBE_CAM_POS.x, WARDROBE_CAM_POS.y, WARDROBE_CAM_POS.z);
