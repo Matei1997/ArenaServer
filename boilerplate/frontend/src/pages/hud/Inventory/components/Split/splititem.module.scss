@@ -130,9 +130,9 @@
                     margin-top: 1vh;
                     height: 0.57037037037037035vh;
 
-                    background-color: red;
+                    background-color: $accent;
 
-                    box-shadow: 0 0 0.5vh 0 #fff;
+                    box-shadow: 0 0 0.5vh 0 rgba(255, 255, 255, 0.3);
                     border-radius: 0.27777777777777773vh;
                     outline: none;
                     appearance: none;
@@ -146,7 +146,7 @@
 
                         width: 1.8518518518518516vh;
                         height: 1.8518518518518516vh;
-                        background-color: red;
+                        background-color: $accent;
 
                         filter: drop-shadow(0 0 0.27777777777777773vh black);
 
@@ -201,7 +201,7 @@
             transition: all 0.1s ease-in;
 
             &:hover {
-                background: #28272b;
+                background: $global-color;
             }
         }
     }

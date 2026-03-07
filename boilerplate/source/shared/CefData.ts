@@ -36,6 +36,103 @@ export namespace CefData {
             wardrobe: {
                 setClothes: { hats?: { drawable: number; texture: number }; masks?: { drawable: number; texture: number }; tops?: { drawable: number; texture: number }; pants?: { drawable: number; texture: number }; shoes?: { drawable: number; texture: number } };
             };
+            mainmenu: {
+                playError: { message: string };
+                setPlayerData: { name: string };
+                setArenaMaps: { maps: { id: string; name: string }[] };
+            };
+            loadout: {
+                presetsLoaded: { presets: { weaponName: string; components: number[] }[] };
+            };
+            playerList: {
+                setPlayers: { id: number; name: string; ping: number }[];
+            };
+            arena: {
+                setLobby: {
+                    state: "waiting" | "voting" | "starting";
+                    queueSize?: number;
+                    players: { id: number; name: string; ready: boolean }[];
+                    countdown: number;
+                    voteMaps: { id: string; name: string; votes: number }[];
+                    voteEndsAt: number;
+                    myVote?: string | null;
+                };
+                setVoting: {
+                    state: "voting";
+                    queueSize?: number;
+                    players: { id: number; name: string; ready: boolean }[];
+                    countdown: number;
+                    voteMaps: { id: string; name: string; votes: number }[];
+                    voteEndsAt: number;
+                    myVote?: string | null;
+                };
+                setMatch: {
+                    mapId: string;
+                    mapName: string;
+                    queueSize?: number;
+                    redTeam: { id: number; name: string }[];
+                    blueTeam: { id: number; name: string }[];
+                    dimension: number;
+                    redScore?: number;
+                    blueScore?: number;
+                    currentRound?: number;
+                    roundsToWin?: number;
+                    timeLeft?: number;
+                };
+                matchUpdate: {
+                    state: string;
+                    redScore: number;
+                    blueScore: number;
+                    currentRound: number;
+                    roundsToWin: number;
+                    weaponName: string;
+                    redAlive: number;
+                    blueAlive: number;
+                    redTeam: { id: number; name: string; kills: number; deaths: number; alive: boolean; health?: number; armor?: number }[];
+                    blueTeam: { id: number; name: string; kills: number; deaths: number; alive: boolean; health?: number; armor?: number }[];
+                    timeLeft: number;
+                };
+                roundStart: {
+                    round: number;
+                    weaponName: string;
+                    warmupTime: number;
+                    redScore: number;
+                    blueScore: number;
+                    roundsToWin: number;
+                };
+                roundEnd: {
+                    winner: "red" | "blue" | "draw";
+                    redScore: number;
+                    blueScore: number;
+                    round: number;
+                    roundsToWin: number;
+                };
+                zoneUpdate: {
+                    centerX: number;
+                    centerY: number;
+                    radius: number;
+                    phase: number;
+                    totalPhases: number;
+                    phaseTimeLeft: number;
+                    dps: number;
+                };
+                itemCounts: { medkits: number; plates: number };
+                itemCastStart: { item: "medkit" | "plate"; castTime: number };
+                itemCastComplete: { item: "medkit" | "plate" };
+                itemCastCancel: {};
+                setVitals: { health: number; armor: number };
+                outOfBounds: { active: boolean; timeLeft: number };
+                killFeed: { killer: string; victim: string };
+                youKill: { victim: string };
+                youDied: { killer: string };
+                matchEnd: {
+                    redScore: number;
+                    blueScore: number;
+                    redTeam: { id: number; name: string; kills: number; deaths: number }[];
+                    blueTeam: { id: number; name: string; kills: number; deaths: number }[];
+                    winner: "red" | "blue" | "draw";
+                };
+            };
         }
         export interface IncomingCEFEvents {
             inventory: {
@@ -55,7 +152,7 @@ export namespace CefData {
             };
 
             creator: {
-                naviation: (player: PlayerMp, data: string) => void;
+                navigation: (player: PlayerMp, data: string) => void;
                 create: (player: PlayerMp, data: StringifiedObject<RageShared.Players.Interfaces.CreatorData>) => void;
             };
 
@@ -73,13 +170,29 @@ export namespace CefData {
 
             wardrobe: {
                 open: (player: PlayerMp) => void;
+                getClothes: (player: PlayerMp) => void;
                 save: (player: PlayerMp, data: string) => void;
+                saveInline: (player: PlayerMp, data: string) => void;
                 close: (player: PlayerMp) => void;
             };
 
             mainmenu: {
                 playFreeroam: (player: PlayerMp) => void;
-                playArena: (player: PlayerMp) => void;
+                playArena: (player: PlayerMp, data?: StringifiedObject<{ size?: number; map?: string; mode?: string }>) => void;
+                getArenaMaps: (player: PlayerMp) => void;
+            };
+
+            arena: {
+                joinQueue: (player: PlayerMp, data?: StringifiedObject<{ size?: number }>) => void;
+                leaveQueue: (player: PlayerMp) => void;
+                leaveMatch: (player: PlayerMp) => void;
+                vote: (player: PlayerMp, data: StringifiedObject<{ mapId: string }>) => void;
+                useItem: (player: PlayerMp, data: StringifiedObject<{ item: "medkit" | "plate" }>) => void;
+            };
+
+            loadout: {
+                getPresets: (player: PlayerMp) => void;
+                savePreset: (player: PlayerMp, data: string) => void;
             };
         }
     }

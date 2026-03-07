@@ -35,7 +35,7 @@ export const Chat = {
      * @returns {void}
      */
     sendAdminWarning(color: number, message: string, level: RageShared.Enums.ADMIN_LEVELS = RageShared.Enums.ADMIN_LEVELS.LEVEL_ONE): void {
-        const players = mp.players.toArray().filter((x) => x.character && x.character.adminlevel >= level);
+        const players = mp.players.toArray().filter((x) => x.account && x.account.adminlevel >= level);
         const padColor = color.toString(16).toUpperCase().padStart(8, "0").slice(0, -2);
         players.forEach((player) => {
             player.outputChatBox(`!{#${padColor}}${message}`);

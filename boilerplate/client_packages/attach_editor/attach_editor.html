@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Attach Editor</title>
+    <style>
+        @import url(https://fonts.googleapis.com/css?family=Open+Sans);
+        body { font-family: 'Open Sans', serif; }
+        #menuGeneral {
+            background-color: #01161E;
+            border-radius: 10px;
+            padding: 5px;
+            width: 50%;
+            margin-right: auto;
+            margin-left: auto;
+            margin-top: 50px;
+            text-align: center;
+        }
+        #menuEdit {
+            background-color: #01161E;
+            border-radius: 10px;
+            padding: 5px;
+            width: 50%;
+            margin-right: auto;
+            margin-left: auto;
+            margin-top: 50px;
+            text-align: center;
+            display: none;
+        }
+        .elementTitle { background-color: #96e565; padding: 10px; border-radius: 10px; font-weight: bold; }
+        .divGeneral { max-height: 300px; overflow-y: auto; }
+        button {
+            padding: 10px;
+            margin-right: 4px;
+            border-radius: 10px;
+            background-color: #044a65;
+            color: white;
+            border: transparent;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        button:hover { transform: scale(1.10); }
+        #editInfo {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            background-color: #01161E;
+            padding: 10px;
+            color: white;
+            border-radius: 10px;
+            font-weight: bold;
+            width: 20%;
+            display: none;
+        }
+        #editorMode, #objectCoords, #objectRot { color: #ff5f5f; }
+        table { text-align: center; color: white; width: 98%; }
+        table td { border: 1px solid #0f21c5; background-color: #055a7b; }
+    </style>
+</head>
+<body>
+    <div id="menuGeneral"></div>
+    <div id="menuEdit"></div>
+    <div id="editInfo">
+        <table>
+            <tr><td colspan="2">Editting: <span id="editorMode">MOVEMENT</span></td></tr>
+            <tr><td>UP | DOWN</td><td>X</td></tr>
+            <tr><td>RIGHT | LEFT</td><td>Y</td></tr>
+            <tr><td>PageUP | PageDown</td><td>Z</td></tr>
+            <tr><td colspan="2">Shift · Speed</td></tr>
+            <tr><td colspan="2">AltLeft + X / Y / Z · Reset coord</td></tr>
+            <tr><td colspan="2">R · Change mode</td></tr>
+            <tr><td colspan="2">Space + Mouse · Move camera</td></tr>
+            <tr><td colspan="2">L · Change fov</td></tr>
+            <tr><td colspan="2">Enter · Finish</td></tr>
+            <tr><td colspan="2">Back · Cancel</td></tr>
+            <tr><td colspan="2">K · Reset</td></tr>
+            <tr><td>Coords:</td><td id="objectCoords">0.00 | 0.00 | 0.00</td></tr>
+            <tr><td>Rot:</td><td id="objectRot">0.00 | 0.00 | 0.00</td></tr>
+        </table>
+    </div>
+
+    <script src="bones.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            var finalStr = '<span class="elementTitle">COMON BONES</span><br>';
+            bonesCommon.forEach(function(e, index) {
+                finalStr += '<button onclick="selectCommonBone(' + index + ')">' + e.name + '</button>';
+            });
+            finalStr += '<br><span class="elementTitle">GENERAL BONES</span><br>';
+            bonesGeneral.forEach(function(e, index) {
+                finalStr += '<button onclick="selectGeneralBone(' + index + ')">' + e.name + '</button>';
+            });
+            document.getElementById('menuGeneral').innerHTML = finalStr;
+        });
+
+        function setupAttachEditor() {
+            document.getElementById('menuGeneral').style.display = 'block';
+            document.getElementById('editInfo').style.display = 'none';
+            document.getElementById('menuEdit').style.display = 'none';
+            changeModeEditor('MOVEMENT');
+            document.getElementById('objectCoords').innerHTML = '0.00 | 0.00 | 0.00';
+            document.getElementById('objectRot').innerHTML = '0.00 | 0.00 | 0.00';
+        }
+
+        function selectCommonBone(boneIndex) {
+            document.getElementById('menuGeneral').style.display = 'none';
+            document.getElementById('editInfo').style.display = 'block';
+            if (typeof mp !== 'undefined') mp.trigger('startAttachObject', bonesCommon[boneIndex].id, bonesCommon[boneIndex].name);
+        }
+
+        function selectGeneralBone(boneIndex) {
+            document.getElementById('menuGeneral').style.display = 'none';
+            document.getElementById('editInfo').style.display = 'block';
+            if (typeof mp !== 'undefined') mp.trigger('startAttachObject', bonesGeneral[boneIndex].id, bonesGeneral[boneIndex].name);
+        }
+
+        function changeModeEditor(mode) {
+            document.getElementById('editorMode').innerHTML = mode;
+        }
+
+        function updateObjectCoords(x, y, z) {
+            document.getElementById('objectCoords').innerHTML = x.toFixed(2) + ' | ' + y.toFixed(2) + ' | ' + z.toFixed(2);
+        }
+
+        function updateObjectRot(rx, ry, rz) {
+            document.getElementById('objectRot').innerHTML = rx.toFixed(2) + ' | ' + ry.toFixed(2) + ' | ' + rz.toFixed(2);
+        }
+
+        var objectsEdit = [];
+        function setupListAttachEdit() {
+            document.getElementById('menuGeneral').style.display = 'none';
+            document.getElementById('editInfo').style.display = 'none';
+            var lenObjects = objectsEdit.length;
+            var finalStr = '<button onclick="closeObjectList()">Close window</button>';
+            if (lenObjects > 0) finalStr += ' <button onclick="removeAllObjects()">Remove all (' + lenObjects + ')</button>';
+            finalStr += '<br><br>';
+            objectsEdit.forEach(function(e, index) {
+                finalStr += '<span>' + e.objectName + ' (' + editSince(e.editDate) + ')</span> ';
+                finalStr += '<span>' + e.bodyName + '</span> ';
+                finalStr += '<button onclick="removeObjectList(' + index + ')">Remove</button> ';
+                finalStr += '<button onclick="editObjectList(' + index + ')">Edit</button><br>';
+            });
+            document.getElementById('menuEdit').innerHTML = finalStr;
+            document.getElementById('menuEdit').style.display = 'block';
+        }
+
+        function removeObjectList(index) {
+            if (typeof mp !== 'undefined') mp.trigger('removeObjectAttach', objectsEdit[index].id);
+            objectsEdit.splice(index, 1);
+            if (objectsEdit.length === 0) return closeObjectList();
+            setupListAttachEdit();
+        }
+
+        function removeAllObjects() {
+            if (typeof mp !== 'undefined') mp.trigger('removeObjectAttach', -1);
+            closeObjectList();
+        }
+
+        function editObjectList(index) {
+            document.getElementById('menuEdit').style.display = 'none';
+            document.getElementById('editInfo').style.display = 'block';
+            changeModeEditor('MOVEMENT');
+            if (typeof mp !== 'undefined') mp.trigger('editAttachObject', objectsEdit[index].id);
+        }
+
+        function closeObjectList() {
+            document.getElementById('menuEdit').style.display = 'none';
+            if (typeof mp !== 'undefined') mp.trigger('closeEditorAttach');
+        }
+
+        function editSince(date) {
+            var dateNow = Date.now();
+            var dateDif = dateNow - new Date(date);
+            var hoursDif = Math.floor(dateDif / (1000 * 60 * 60));
+            var minDif = Math.floor(dateDif / (1000 * 60));
+            if (hoursDif === 1) return hoursDif + ' hour ago';
+            if (hoursDif > 0) return hoursDif + ' hours ago';
+            if (minDif === 1) return minDif + ' min ago';
+            if (minDif > 0) return minDif + ' mins ago';
+            return 'now';
+        }
+    </script>
+</body>
+</html>

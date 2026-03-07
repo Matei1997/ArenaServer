@@ -2,6 +2,9 @@ import { RAGERP } from "@api";
 import { BanEntity } from "@entities/Ban.entity";
 import { CharacterEntity } from "@entities/Character.entity";
 import { entityAttachments } from "@modules/Attachments.module";
+import { isPlayerInArenaMatch, leaveMatch } from "@arena/ArenaMatch.manager";
+
+const LEGION_SQUARE = { x: 213.0, y: -810.0, z: 30.73, heading: 160.0 };
 
 async function onPlayerJoin(player: PlayerMp) {
     try {
@@ -31,16 +34,29 @@ async function onPlayerJoin(player: PlayerMp) {
     }
 }
 async function onPlayerQuit(player: PlayerMp) {
+    if (isPlayerInArenaMatch(player)) {
+        leaveMatch(player);
+    }
+
     const character = player.character;
     if (!character) return;
-    const lastPosition = { ...player.position };
 
-    await RAGERP.database.getRepository(CharacterEntity).update(character.id, {
-        position: { x: lastPosition.x, y: lastPosition.y, z: lastPosition.z, heading: player.heading },
-        lastlogin: character.lastlogin,
-        deathState: character.deathState,
-        cash: character.cash
-    });
+    if (player.dimension !== 0) {
+        await RAGERP.database.getRepository(CharacterEntity).update(character.id, {
+            position: LEGION_SQUARE,
+            lastlogin: character.lastlogin,
+            deathState: character.deathState,
+            cash: character.cash
+        });
+    } else {
+        const lastPosition = { ...player.position };
+        await RAGERP.database.getRepository(CharacterEntity).update(character.id, {
+            position: { x: lastPosition.x, y: lastPosition.y, z: lastPosition.z, heading: player.heading },
+            lastlogin: character.lastlogin,
+            deathState: character.deathState,
+            cash: character.cash
+        });
+    }
 }
 
 

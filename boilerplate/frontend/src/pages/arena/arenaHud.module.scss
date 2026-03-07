@@ -1,0 +1,715 @@
+@import "../../styles/vars";
+
+.arenaHud {
+    position: absolute;
+    inset: 0;
+    font-family: $global-font;
+
+    > * {
+        pointer-events: none;
+    }
+
+    .leaveMatchBtn {
+        pointer-events: auto;
+    }
+}
+
+.tmBarsInline {
+    margin-left: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3vh;
+    width: 7vh;
+}
+
+.tmBarInline {
+    height: 0.45vh;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 0.3vh;
+    overflow: hidden;
+}
+
+.tmBarHealth {
+    height: 100%;
+    background: linear-gradient(90deg, #00d07a, #65fba9);
+}
+
+.tmBarArmor {
+    height: 100%;
+    background: linear-gradient(90deg, #4da3ff, #8ac4ff);
+}
+
+
+.topCenter {
+    position: absolute;
+    top: 2vh;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.8vh;
+}
+
+.scores {
+    display: flex;
+    align-items: center;
+    gap: 3vh;
+    padding: 1.2vh 2.5vh;
+    background: $hud-card-bg;
+    border-radius: 1.2vh;
+    border: 1px solid $hud-border;
+    box-shadow: 0 0 2vh rgba(0, 0, 0, 0.4);
+}
+
+.teamBadge {
+    display: flex;
+    align-items: center;
+    gap: 1vh;
+    font-size: 2vh;
+    color: $hud-text;
+
+    .score {
+        font-size: 2.5vh;
+        font-weight: bold;
+    }
+}
+
+.redDot {
+    width: 1.2vh;
+    height: 1.2vh;
+    background: #e53935;
+    border-radius: 50%;
+    box-shadow: 0 0 0.6vh #e53935;
+}
+
+.blueDot {
+    width: 1.2vh;
+    height: 1.2vh;
+    background: #1e88e5;
+    border-radius: 50%;
+    box-shadow: 0 0 0.6vh #1e88e5;
+}
+
+.timer {
+    font-size: 2.2vh;
+    color: $hud-text;
+    font-weight: bold;
+    min-width: 5vh;
+    text-align: center;
+}
+
+.mapName {
+    font-size: 1.3vh;
+    color: $hud-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.25em;
+}
+
+.topLeft {
+    position: absolute;
+    top: 12vh;
+    left: 2vh;
+}
+
+.teammates {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8vh;
+}
+
+.teammate {
+    display: flex;
+    align-items: center;
+    gap: 1vh;
+    padding: 0.8vh 1.4vh;
+    background: $hud-card-bg;
+    border-radius: 1vh;
+    border: 1px solid $hud-border;
+    border-left: 3px solid $hud-accent;
+    min-width: 18vh;
+}
+
+.tmName {
+    font-size: 1.5vh;
+    color: $hud-text;
+    flex: 1;
+}
+
+.tmStatus {
+    font-size: 1.3vh;
+    color: $hud-text-muted;
+}
+
+.dead {
+    opacity: 0.4;
+}
+
+.alive {
+    font-size: 1.1vh;
+    color: $hud-text-muted;
+}
+
+.centerInfo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3vh;
+    min-width: 12vh;
+}
+
+.roundLabel {
+    font-size: 1.1vh;
+    color: $hud-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+}
+
+.weaponLabel {
+    font-size: 1vh;
+    color: $hud-accent;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.roundOverlay {
+    position: absolute;
+    top: 30%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1vh;
+    pointer-events: none;
+    z-index: 10;
+    animation: popIn 0.4s ease-out;
+}
+
+.roundTitle {
+    font-size: 4vh;
+    color: $hud-text;
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+    text-shadow: 0 0 2vh rgba(0, 0, 0, 0.8);
+}
+
+.roundWeapon {
+    font-size: 2vh;
+    color: $hud-accent;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+}
+
+.roundScore {
+    font-size: 3vh;
+    color: $hud-text-muted;
+    font-weight: bold;
+}
+
+.zoneInfo {
+    position: absolute;
+    top: 10vh;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 1.5vh;
+    padding: 0.6vh 1.5vh;
+    background: $hud-card-bg;
+    border-radius: 0.8vh;
+    border: 1px solid $hud-border;
+    font-size: 1.2vh;
+    color: $hud-text-muted;
+}
+
+.outOfBounds {
+    position: absolute;
+    top: 14vh;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.6vh 1.6vh;
+    background: rgba(0, 0, 0, 0.55);
+    border: 1px solid rgba(255, 90, 90, 0.45);
+    color: #ff9090;
+    font-size: 1.2vh;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    border-radius: 0.6vh;
+    box-shadow: 0 0 1.4vh rgba(255, 90, 90, 0.35);
+}
+
+.zonePhase {
+    color: $hud-text;
+}
+
+.zoneTimer {
+    color: #ffb74d;
+    font-weight: bold;
+}
+
+.zoneRadius {
+    color: $hud-text-muted;
+}
+
+.zoneDps {
+    color: #e53935;
+}
+
+.itemBar {
+    position: absolute;
+    bottom: 12vh;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 1.5vh;
+    pointer-events: auto;
+}
+
+.itemBtn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3vh;
+    padding: 1vh 1.5vh;
+    background: $hud-card-bg;
+    border: 1px solid $hud-border;
+    border-radius: 1vh;
+    color: $hud-text;
+    cursor: pointer;
+    font-family: $global-font;
+    transition: all 0.2s;
+    min-width: 7vh;
+
+    &:hover:not(:disabled) {
+        border-color: $hud-accent;
+        background: rgba(255, 54, 118, 0.1);
+    }
+}
+
+.itemDisabled {
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+.itemKey {
+    font-size: 1vh;
+    font-weight: 600;
+    color: $hud-text-muted;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 0.2vh 0.5vh;
+    border-radius: 0.3vh;
+    border: 1px solid $hud-border;
+    letter-spacing: 0.05em;
+}
+
+.itemIcon {
+    font-size: 2vh;
+}
+
+.itemLabel {
+    font-size: 1vh;
+    color: $hud-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.itemCount {
+    font-size: 1.4vh;
+    font-weight: bold;
+    color: $hud-accent;
+}
+
+.castBar {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3vh;
+    min-width: 12vh;
+}
+
+.castLabel {
+    font-size: 1.1vh;
+    color: $hud-text-muted;
+    text-align: center;
+}
+
+.castProgress {
+    height: 0.6vh;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 0.3vh;
+    overflow: hidden;
+}
+
+.castFill {
+    height: 100%;
+    background: $hud-accent;
+    width: 0%;
+    animation: castAnim linear forwards;
+}
+
+@keyframes castAnim {
+    from { width: 0%; }
+    to { width: 100%; }
+}
+
+.bottomLeft {
+    position: absolute;
+    bottom: 8vh;
+    left: 2vh;
+}
+
+.killFeed {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6vh;
+}
+
+.killEntry {
+    display: flex;
+    align-items: center;
+    gap: 0.8vh;
+    padding: 0.6vh 1.2vh;
+    background: $hud-card-bg;
+    border-radius: 0.8vh;
+    border: 1px solid $hud-border;
+    font-size: 1.3vh;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-1.5vh);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.killer {
+    color: $hud-text;
+}
+
+.arrow {
+    color: $hud-accent;
+    font-size: 1.1vh;
+}
+
+.victim {
+    color: rgba(255, 180, 180, 0.95);
+}
+
+.centerNotification {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none;
+}
+
+.killNotif,
+.deathNotif {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: popIn 0.3s ease-out;
+}
+
+@keyframes popIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.killNotif {
+    .killLabel {
+        font-size: 2vh;
+        color: $hud-text-muted;
+        text-transform: uppercase;
+        letter-spacing: 0.3em;
+    }
+    .killName {
+        font-size: 3.5vh;
+        color: #4caf50;
+        font-weight: bold;
+        text-shadow: 0 0 1.5vh rgba(76, 175, 80, 0.5);
+    }
+}
+
+.deathNotif {
+    .deathLabel {
+        font-size: 2vh;
+        color: $hud-text-muted;
+        text-transform: uppercase;
+        letter-spacing: 0.3em;
+    }
+    .deathName {
+        font-size: 3.5vh;
+        color: $hud-accent;
+        font-weight: bold;
+        text-shadow: 0 0 1.5vh $hud-accent-dim;
+    }
+}
+
+.bottomRight {
+    position: absolute;
+    bottom: 3vh;
+    right: 2vh;
+}
+
+.weapon {
+    padding: 1vh 1.6vh;
+    background: $hud-card-bg;
+    border-radius: 1vh;
+    border: 1px solid $hud-border;
+}
+
+.ammo {
+    font-size: 1.8vh;
+    color: $hud-text;
+}
+
+.healthArmor {
+    margin-top: 1vh;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5vh;
+}
+
+.healthBar,
+.armorBar {
+    width: 14vh;
+    height: 0.9vh;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 0.5vh;
+    overflow: hidden;
+    border: 1px solid $hud-border;
+}
+
+.healthBar .barFill {
+    height: 100%;
+    background: linear-gradient(90deg, #406e3b, #5ba052);
+    transition: width 0.2s;
+}
+
+.armorBar .barFill {
+    height: 100%;
+    background: linear-gradient(90deg, #1c3a4a, #386e7c);
+    transition: width 0.2s;
+}
+
+.leaveMatchBtn {
+    margin-top: 1.2vh;
+    padding: 0.8vh 1.5vh;
+    font-size: 1.3vh;
+    font-family: $global-font;
+    background: $hud-card-bg;
+    border: 1px solid rgba(255, 54, 118, 0.4);
+    color: $hud-accent;
+    border-radius: 0.8vh;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+        background: $hud-accent-dim;
+        border-color: $hud-accent;
+    }
+}
+
+/* Tab scoreboard overlay */
+.scoreboardOverlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+}
+
+.scoreboardPanel {
+    background: $hud-card-bg;
+    border: 1px solid $hud-border;
+    border-radius: 1.2vh;
+    padding: 3vh;
+    min-width: 50vh;
+    box-shadow: 0 0 4vh rgba(0, 0, 0, 0.6);
+}
+
+.scoreboardTitle {
+    font-size: 2.2vh;
+    color: $hud-accent;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    margin-bottom: 2vh;
+    text-align: center;
+}
+
+.scoreboardScores {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2vh;
+    padding-bottom: 1.5vh;
+    border-bottom: 1px solid $hud-border;
+
+    .sbRed {
+        color: #e53935;
+        font-size: 2vh;
+        font-weight: bold;
+    }
+    .sbBlue {
+        color: #1e88e5;
+        font-size: 2vh;
+        font-weight: bold;
+    }
+    .sbTimer {
+        font-size: 2.5vh;
+        color: $hud-text;
+    }
+}
+
+.scoreboardTeams {
+    display: flex;
+    gap: 4vh;
+    justify-content: center;
+}
+
+.sbTeam {
+    min-width: 22vh;
+}
+
+.sbTeamHeader {
+    font-size: 1.6vh;
+    color: $hud-text-muted;
+    margin-bottom: 1vh;
+    padding-bottom: 0.5vh;
+}
+
+.sbRow {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.4vh 0;
+    font-size: 1.4vh;
+    color: $hud-text;
+
+    .sbKills {
+        color: #4caf50;
+        margin-left: 1vh;
+    }
+    .sbDeaths {
+        color: $hud-accent;
+        margin-left: 1vh;
+    }
+}
+
+.scoreboardHint {
+    margin-top: 2vh;
+    font-size: 1.2vh;
+    color: $hud-text-muted;
+    text-align: center;
+}
+
+/* Results screen */
+.results {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.9);
+    pointer-events: auto;
+}
+
+.resultsTitle {
+    font-size: 4vh;
+    color: $hud-text;
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+    margin-bottom: 3vh;
+    text-shadow: 0 0 2vh $hud-accent-dim;
+}
+
+.resultsTitle::before {
+    content: "HOPOUTS — ";
+    color: $hud-accent;
+}
+
+.resultsScores {
+    display: flex;
+    align-items: center;
+    gap: 4vh;
+    margin-bottom: 2vh;
+}
+
+.teamScore {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5vh;
+
+    .score {
+        font-size: 5vh;
+        font-weight: bold;
+        color: $hud-text;
+    }
+}
+
+.teamLabel {
+    font-size: 1.8vh;
+    color: $hud-text-muted;
+}
+
+.vs {
+    font-size: 2.5vh;
+    color: $hud-text-muted;
+}
+
+.winner {
+    font-size: 3vh;
+    font-weight: bold;
+    color: $hud-accent;
+    margin-bottom: 4vh;
+    text-shadow: 0 0 1.5vh $hud-accent-dim;
+}
+
+.resultsTeams {
+    display: flex;
+    gap: 6vh;
+}
+
+.teamList {
+    min-width: 20vh;
+}
+
+.teamHeader {
+    font-size: 1.6vh;
+    color: $hud-text;
+    margin-bottom: 1vh;
+    padding-bottom: 0.5vh;
+    border-bottom: 1px solid $hud-accent;
+}
+
+.playerRow {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5vh 0;
+    font-size: 1.4vh;
+    color: $hud-text;
+
+    .kd {
+        color: $hud-accent;
+        margin-left: 2vh;
+    }
+}

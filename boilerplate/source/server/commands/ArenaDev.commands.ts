@@ -1,7 +1,15 @@
+import * as fs from "fs";
+import * as path from "path";
 import { RAGERP } from "@api";
 import { RageShared } from "@shared/index";
+import { getArenaPresets, saveArenaPreset } from "@arena/ArenaPresets.asset";
+import { IArenaPreset } from "@arena/ArenaPreset.interface";
+import { startSoloMatch } from "@arena/Arena.module";
 
 type ArenaMarkType = "center" | "redspawn" | "bluespawn" | "redcar" | "bluecar" | "safenode";
+
+let attachEditorEditing = false;
+const ATTACHMENTS_FILE = path.join(process.cwd(), "attachments.txt");
 
 interface ArenaPresetPoints {
     center?: { x: number; y: number; z: number; heading?: number };
@@ -57,12 +65,13 @@ RAGERP.commands.add({
     }
 });
 
-RAGERP.commands.add({
+const hopoutsMarkCmd = {
     name: "arena_mark",
-    description: "Mark a point for arena preset (center|redspawn|bluespawn|redcar|bluecar|safenode)",
+    aliases: ["hopouts_mark"],
+    description: "Mark a point for Hopouts location (e.g. /arena_mark vespucci_canal center)",
     adminlevel: ADMIN_DEV,
     run: (player: PlayerMp, _fulltext: string, presetId: string, markType: string) => {
-        if (!presetId || !markType) return RAGERP.chat.sendSyntaxError(player, "/arena_mark <presetId> <center|redspawn|bluespawn|redcar|bluecar|safenode>");
+        if (!presetId || !markType) return RAGERP.chat.sendSyntaxError(player, "/arena_mark <locationId> <center|redspawn|bluespawn|redcar|bluecar|safenode>");
         const type = markType.toLowerCase() as ArenaMarkType;
         const valid: ArenaMarkType[] = ["center", "redspawn", "bluespawn", "redcar", "bluecar", "safenode"];
         if (!valid.includes(type)) return player.showNotify(RageShared.Enums.NotifyType.TYPE_ERROR, `Invalid type. Use: ${valid.join(", ")}`);
@@ -90,11 +99,12 @@ RAGERP.commands.add({
             player.showNotify(RageShared.Enums.NotifyType.TYPE_SUCCESS, `[${presetId}] ${type} marked`);
         }
     }
-});
+};
+RAGERP.commands.add(hopoutsMarkCmd);
 
 RAGERP.commands.add({
     name: "arena_export",
-    description: "Export arena preset as JSON",
+    description: "Export Hopouts location preset as JSON",
     adminlevel: ADMIN_DEV,
     run: (player: PlayerMp, _fulltext: string, presetId: string) => {
         if (!presetId) return RAGERP.chat.sendSyntaxError(player, "/arena_export <presetId>");
@@ -112,7 +122,104 @@ RAGERP.commands.add({
         };
 
         const json = JSON.stringify(exportObj, null, 2);
-        console.log(`\n--- Arena preset: ${presetId} ---\n${json}\n---`);
+        console.log(`\n--- Hopouts location: ${presetId} ---\n${json}\n---`);
         player.outputChatBox(`${RageShared.Enums.STRINGCOLORS.GREEN}[${presetId}] Exported. Check server console for JSON.`);
+    }
+});
+
+const hopoutsSaveCmd = {
+    name: "arena_save",
+    aliases: ["hopouts_save"],
+    description: "Save Hopouts location (e.g. /arena_save vespucci_canal \"Vespucci Canal\")",
+    adminlevel: ADMIN_DEV,
+    run: (player: PlayerMp, _fulltext: string, presetId: string, presetName?: string) => {
+        if (!presetId) return RAGERP.chat.sendSyntaxError(player, "/arena_save <locationId> [displayName]");
+        const preset = arenaMarkedPresets.get(presetId);
+        if (!preset) return player.showNotify(RageShared.Enums.NotifyType.TYPE_ERROR, `No points marked for preset "${presetId}". Use /arena_mark first.`);
+        if (!preset.center || !preset.redspawn || !preset.bluespawn || !preset.redcar || !preset.bluecar) {
+            return player.showNotify(RageShared.Enums.NotifyType.TYPE_ERROR, "Mark center, redspawn, bluespawn, redcar, bluecar first.");
+        }
+
+        const name = (presetName && presetName.trim()) || presetId;
+        const toSave: IArenaPreset = {
+            id: presetId,
+            name,
+            center: preset.center,
+            redSpawn: preset.redspawn,
+            blueSpawn: preset.bluespawn,
+            redCar: preset.redcar,
+            blueCar: preset.bluecar,
+            safeNodes: preset.safeNodes && preset.safeNodes.length > 0 ? preset.safeNodes : undefined
+        };
+
+        if (saveArenaPreset(toSave)) {
+            player.showNotify(RageShared.Enums.NotifyType.TYPE_SUCCESS, `Hopouts location "${name}" saved.`);
+        } else {
+            player.showNotify(RageShared.Enums.NotifyType.TYPE_ERROR, "Failed to save Hopouts location.");
+        }
+    }
+};
+RAGERP.commands.add(hopoutsSaveCmd);
+
+RAGERP.commands.add({
+    name: "hopouts_locations",
+    aliases: ["arena_locations"],
+    description: "List available Hopouts locations",
+    run: (player: PlayerMp) => {
+        const presets = getArenaPresets();
+        if (presets.length === 0) {
+            return player.showNotify(RageShared.Enums.NotifyType.TYPE_ERROR, "No Hopouts locations. Use /arena_mark and /arena_save to create.");
+        }
+        const list = presets.map((p) => `${p.name} (${p.id})`).join(", ");
+        player.outputChatBox(`${RageShared.Enums.STRINGCOLORS.GREEN}Hopouts locations: ${list}`);
+    }
+});
+
+RAGERP.commands.add({
+    name: "hopouts_solo",
+    aliases: ["arena_solo"],
+    description: "Start a solo Hopouts match for testing (no queue)",
+    adminlevel: ADMIN_DEV,
+    run: (player: PlayerMp, _fulltext: string, presetId?: string) => {
+        if (!player.character) return player.showNotify(RageShared.Enums.NotifyType.TYPE_ERROR, "No character loaded.");
+        if (startSoloMatch(player, presetId?.trim() || undefined)) {
+            player.showNotify(RageShared.Enums.NotifyType.TYPE_SUCCESS, "Solo Hopouts match started.");
+        } else {
+            player.showNotify(RageShared.Enums.NotifyType.TYPE_ERROR, "Cannot start. Already in match, or no Hopouts locations. Use /arena_mark and /arena_save first.");
+        }
+    }
+});
+
+// Attachments editor (based on https://github.com/1PepeCortez/Attachments-editor)
+RAGERP.commands.add({
+    name: "attach",
+    description: "Start attach editor: /attach [object_name] (e.g. prop_cs_beer_bot_02)",
+    adminlevel: ADMIN_DEV,
+    run: (player: PlayerMp, _fulltext: string, objectName?: string) => {
+        if (attachEditorEditing) return player.outputChatBox("!{#ff0000}Already editing an object!");
+        if (!objectName || !objectName.trim()) return player.outputChatBox("!{#ff0000}/attach [object_name]");
+        player.call("attachObject", [objectName.trim()]);
+        attachEditorEditing = true;
+    }
+});
+
+mp.events.add("startEditAttachServer", () => {
+    attachEditorEditing = true;
+});
+
+mp.events.add("finishAttach", (player: PlayerMp, objectJson: string) => {
+    attachEditorEditing = false;
+    try {
+        const data = JSON.parse(objectJson);
+        if (data.cancel === true) return;
+
+        const line = `[ '${data.bodyName}', ${data.boneIndex}, '${data.object}', ${data.body}, ${data.x.toFixed(4)}, ${data.y.toFixed(4)}, ${data.z.toFixed(4)}, ${data.rx.toFixed(4)}, ${data.ry.toFixed(4)}, ${data.rz.toFixed(4)} ],\r\n`;
+        player.outputChatBox(line);
+
+        fs.appendFile(ATTACHMENTS_FILE, line, (err) => {
+            if (err) console.error("[AttachEditor] Failed to save:", err.message);
+        });
+    } catch {
+        // ignore parse errors
     }
 });

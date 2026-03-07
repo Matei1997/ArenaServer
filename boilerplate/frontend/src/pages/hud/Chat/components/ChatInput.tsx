@@ -78,7 +78,7 @@ const ChatInput: FC<ChatInputProps> = ({ store, chatFocusFunc, chatBlur, chatRef
     useEffect(() => {
         EventManager.addHandler("chat", "setTextInput", (text: string) => setInputText(text));
 
-        EventManager.addHandler("chat", "toggle", (bool: true) => {
+        EventManager.addHandler("chat", "toggle", (bool: boolean) => {
             setFocused(bool);
             bool ? input.current?.focus() : input.current?.blur();
         });
@@ -87,6 +87,12 @@ const ChatInput: FC<ChatInputProps> = ({ store, chatFocusFunc, chatBlur, chatRef
             EventManager.emitServer("chat", "sendMessage", String(inputText));
             store.updateLastMessages(String(inputText));
             setInputText("");
+        });
+
+        EventManager.addHandler("chat", "close", () => {
+            setInputText("");
+            setFocused(false);
+            input.current?.blur();
         });
     }, [inputText, store]);
 
@@ -133,6 +139,11 @@ const ChatInput: FC<ChatInputProps> = ({ store, chatFocusFunc, chatBlur, chatRef
                     sendMessage(inputText);
                     return;
                 }
+                case "Escape": {
+                    event.preventDefault();
+                    EventManager.emitClient("chat", "close");
+                    return;
+                }
                 case "ArrowUp": {
                     let counter = store.historyCounter;
                     counter++;
@@ -170,8 +181,8 @@ const ChatInput: FC<ChatInputProps> = ({ store, chatFocusFunc, chatBlur, chatRef
         const value = e.target.value;
         setInputText(value);
 
-        if (value.startsWith("/") && value.length > 3) {
-            const match = store.commandList.find((cmd) => cmd.startsWith(value));
+        if (value.startsWith("/") && value.length > 1) {
+            const match = store.commandList.find((cmd) => cmd.startsWith(value.toLowerCase()));
             setSuggestedCommand(match || "");
         } else {
             setSuggestedCommand("");
@@ -189,7 +200,7 @@ const ChatInput: FC<ChatInputProps> = ({ store, chatFocusFunc, chatBlur, chatRef
                 <input
                     className={style.input}
                     type="text"
-                    placeholder={isFocused ? "Insert Message..." : ""}
+                    placeholder={isFocused ? "/global, /team, /local, /admin or type to chat locally" : ""}
                     ref={input}
                     value={inputText}
                     onFocus={() => {

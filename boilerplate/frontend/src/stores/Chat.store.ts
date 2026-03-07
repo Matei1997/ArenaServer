@@ -9,7 +9,7 @@ interface IChatSettings {
 
 class _ChatStore {
     isActive: boolean = false;
-    commandList: string[] = observable.array(["/goto", "/help", "/ban", "/kick", "/mute", "/unmute"]);
+    commandList: string[] = observable.array(["/global", "/team", "/local", "/admin", "/goto", "/help", "/ban", "/kick", "/mute", "/unmute"]);
 
     messages: string[] = observable.array([
         // 'this is a long <span style="color:red">test text hello 123</span>, this is a long test text hello 123, this is a long test text hello 123',

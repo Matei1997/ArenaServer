@@ -15,7 +15,28 @@ RAGERP.commands.add({
         player.outputChatBox(`${RageShared.Enums.STRINGCOLORS.WHITE}/fdim <id> - Set your dimension (private instance)`);
         player.outputChatBox(`${RageShared.Enums.STRINGCOLORS.WHITE}/fveh <model> - Spawn vehicle (e.g. sultan, infernus)`);
         player.outputChatBox(`${RageShared.Enums.STRINGCOLORS.WHITE}/fgun <weapon> - Give weapon (e.g. pistol, assaultrifle)`);
+        player.outputChatBox(`${RageShared.Enums.STRINGCOLORS.WHITE}/poligon - Teleport to shooting range`);
     }
+});
+
+const SHOOTING_RANGE_POS = new mp.Vector3(821.5705, -2163.812, 29.656);
+
+RAGERP.commands.add({
+    name: "poligon",
+    aliases: ["shootingrange", "range"],
+    description: "Teleport to shooting range (45 targets, Assault Rifle + Carbine Rifle)",
+    run: (player: PlayerMp) => {
+        if (!player.getVariable("loggedin")) return player.showNotify(RageShared.Enums.NotifyType.TYPE_ERROR, "You must be logged in.");
+        player.giveWeaponEx(weaponHash.assaultrifle, 1000, 30);
+        player.giveWeaponEx(weaponHash.carbinerifle, 1000, 30);
+        player.position = SHOOTING_RANGE_POS;
+        player.call("client::shootingrange:start");
+        player.showNotify(RageShared.Enums.NotifyType.TYPE_SUCCESS, "Shooting range started! Hit 45 targets.");
+    }
+});
+
+mp.events.add("FinishedPoligon", (player: PlayerMp, points: number) => {
+    player.showNotify(RageShared.Enums.NotifyType.TYPE_SUCCESS, `Shooting range complete! Score: ${points} points`);
 });
 
 RAGERP.commands.add({
@@ -59,8 +80,8 @@ RAGERP.commands.add({
 
 RAGERP.commands.add({
     name: "fgun",
-    aliases: ["fweapon"],
-    description: "Give yourself a weapon (e.g. /fgun pistol, /fgun assaultrifle)",
+    aliases: ["fweapon", "weapon", "gun", "wep"],
+    description: "Give yourself a weapon (e.g. /fgun pistol, /weapon assaultrifle)",
     run: (player: PlayerMp, _fulltext: string, weaponName: string) => {
         if (!player.getVariable("loggedin")) return player.showNotify(RageShared.Enums.NotifyType.TYPE_ERROR, "You must be logged in.");
         if (!weaponName || !weaponName.trim()) return RAGERP.chat.sendSyntaxError(player, "/fgun <weapon>");

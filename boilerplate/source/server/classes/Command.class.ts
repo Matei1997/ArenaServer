@@ -116,9 +116,9 @@ class _CommandRegistry {
     }
 
     reloadCommands(player: PlayerMp) {
-        if (!player || !mp.players.exists(player) || !player.character) return;
+        if (!player || !mp.players.exists(player) || !player.account) return;
         const scriptCommands = CommandRegistry.getallCommands();
-        const commandList = player.character.adminlevel <= 0 ? scriptCommands.filter((x) => !x.adminlevel).map((x) => `/${x.name}`) : scriptCommands.map((x) => `/${x.name}`);
+        const commandList = (player.account.adminlevel ?? 0) <= 0 ? scriptCommands.filter((x) => !x.adminlevel).map((x) => `/${x.name}`) : scriptCommands.map((x) => `/${x.name}`);
         CefEvent.emit(player, "chat", "setCommands", commandList);
     }
 }

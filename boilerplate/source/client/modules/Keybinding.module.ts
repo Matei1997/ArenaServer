@@ -14,7 +14,6 @@ function playerPressEscape() {
         return mp.events.callRemote("server::inventory:cancelAction");
     }
 
-    mp.console.logInfo(`Player's browser page is: ${Browser.currentPage}`);
     if (!Browser.currentPage) return;
 
     switch (Browser.currentPage) {
@@ -44,9 +43,16 @@ PlayerKeybind.addKeybind({ keyCode: 27, up: false }, playerPressEscape, "Close P
 PlayerKeybind.addKeybind(
     { keyCode: 113, up: false },
     () => {
-        if (Browser.currentPage) mp.gui.cursor.show(true, true);
+        if (!mp.players.local.getVariable("loggedin") || Client.isDead) return;
+        if (Browser.currentPage === "playerMenu") {
+            Browser.closePage();
+        } else if (!Browser.currentPage || Browser.currentPage === "hud") {
+            Browser.processEvent("cef::system:setPage", "playerMenu");
+        } else if (Browser.currentPage === "arena_hud") {
+            Browser.processEvent("cef::system:setPage", "playerMenu");
+        }
     },
-    "Restore cursor (F2)"
+    "Player menu (F2)"
 );
 
 // Hold right-click in clothing menu to orbit camera and view character
@@ -87,7 +93,7 @@ PlayerKeybind.addKeybind(
     { keyCode: 73, up: false },
     async () => {
         if (!mp.players.local.getVariable("loggedin") || Client.isDead) return;
-        await Inventory.open();
+        return;
     },
     "Open or close Inventory"
 );
@@ -125,4 +131,57 @@ PlayerKeybind.addKeybind(
         Client.canAcceptDeath = false;
     },
     "Accept death"
+);
+
+PlayerKeybind.addKeybind(
+    { keyCode: 20, up: false },
+    () => {
+        if (Browser.currentPage === "arena_hud") {
+            mp.events.call("client::eventManager", "cef::arena:toggleScoreboard", {});
+        }
+    },
+    "Hopouts scoreboard (Caps)"
+);
+
+PlayerKeybind.addKeybind(
+    { keyCode: 18, up: false },
+    () => {
+        if (Browser.currentPage === "arena_hud") {
+            Browser.toggleCursorForClick();
+        }
+    },
+    "Hopouts cursor toggle (Alt)"
+);
+
+// Arena item keybinds: 5 = Medkit, 6 = Plate
+PlayerKeybind.addKeybind(
+    { keyCode: 53, up: false },
+    () => {
+        if (Browser.currentPage !== "arena_hud") return;
+        mp.events.callRemote("server::arena:useItem", JSON.stringify({ item: "medkit" }));
+    },
+    "Arena: Use Medkit (5)"
+);
+PlayerKeybind.addKeybind(
+    { keyCode: 54, up: false },
+    () => {
+        if (Browser.currentPage !== "arena_hud") return;
+        mp.events.callRemote("server::arena:useItem", JSON.stringify({ item: "plate" }));
+    },
+    "Arena: Use Plate (6)"
+);
+
+PlayerKeybind.addKeybind(
+    { keyCode: 114, up: false },
+    () => {
+        if (!mp.players.local.getVariable("loggedin") || Client.isDead) return;
+        if (Browser.currentPage === "mainmenu") {
+            Browser.closePage();
+        } else if (!Browser.currentPage || Browser.currentPage === "hud") {
+            Browser.processEvent("cef::system:setPage", "mainmenu");
+        } else if (Browser.currentPage === "arena_hud") {
+            Browser.processEvent("cef::system:setPage", "mainmenu");
+        }
+    },
+    "Toggle menu (F3)"
 );

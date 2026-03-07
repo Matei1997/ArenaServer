@@ -35,8 +35,8 @@ mp.Player.prototype.showNotify = function (type: RageShared.Enums.NotifyType, me
  * @returns {number} The admin level of the player.
  */
 mp.Player.prototype.getAdminLevel = function (): number {
-    if (!this || !mp.players.exists(this) || !this.character) return 0;
-    return this.character.adminlevel;
+    if (!this || !mp.players.exists(this) || !this.account) return 0;
+    return this.account.adminlevel;
 };
 
 /**

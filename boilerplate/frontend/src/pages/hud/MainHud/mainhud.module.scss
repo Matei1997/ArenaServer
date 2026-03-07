@@ -1,285 +1,287 @@
 @import "../../../styles/vars";
 
 .mainhud {
-
     position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    pointer-events: none;
+    z-index: 0;
+
+    > * {
+        pointer-events: none;
+    }
+}
+
+.left {
+    display: flex;
+    align-items: flex-end;
+    padding: 0 0 2vh 2vh;
+}
+
+.areainfo {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    z-index: -1;
-    height: 100%;
-    width: 100%;
-    filter: drop-shadow(0 0 0.46296296296296297vh black);
+    gap: 1vh;
+    padding: 1.2vh 2vh;
+    background: $hud-card-bg;
+    border-radius: 1.2vh;
+    border: 1px solid $hud-border;
+    min-width: 22vh;
 
-    .left {
-        width: 59.25925925925926vh;
-        height: 100%;
+    img {
+        width: 2.2vh;
+        height: 2.2vh;
+        opacity: 0.9;
+    }
 
+    .areadata {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2vh;
 
-        .areainfo {
-            position: absolute;
-            left: 28vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: $global-bg-transparent-reverted;
-            width: 20vh;
-            height: 5vh;
-            border-top-right-radius: 1vh;
-            border-bottom-right-radius: 1vh;
-            bottom: 1.5vh;
+        .areaname {
+            font-family: $global-font;
+            font-size: 1.6vh;
+            font-weight: 600;
+            color: $hud-text;
+            text-shadow: 0 0 1vh rgba(0, 0, 0, 0.8);
+        }
 
-            img {
-                width: 2.314814814814815vh;
-                height: 2.314814814814815vh;
-            }
+        .streetname {
+            font-size: 1.2vh;
+            color: $hud-text-muted;
+            text-shadow: 0 0 0.8vh rgba(0, 0, 0, 0.8);
+        }
+    }
+}
 
-            .areadata {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
+.right {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 1vh;
+    padding: 2vh 2vh 2vh 0;
 
-                .areaname {
-                    font-family: $global-font;
-                    text-shadow: 0 0 0.9259259259259259vh black;
-                }
+    &::before {
+        content: "";
+        position: absolute;
+        top: -4vh;
+        right: -4vh;
+        width: 45vh;
+        height: calc(100% + 8vh);
+        background: $hud-radial;
+        pointer-events: none;
+        z-index: -1;
+    }
+}
 
-                .streetname {
-                    font-family: Arial, Helvetica, sans-serif;
-                    text-shadow: 0 0 0.9259259259259259vh black;
-                }
-            }
+.serverBadges {
+    display: flex;
+    align-items: center;
+    gap: 1vh;
+}
+
+.serverBadge {
+    padding: 0.8vh 1.4vh;
+    background: $hud-card-bg;
+    color: $hud-text;
+    border-radius: 1.2vh;
+    font-size: 1.3vh;
+    font-weight: 500;
+    border: 1px solid $hud-border;
+}
+
+.onlineBadge {
+    display: flex;
+    align-items: center;
+    gap: 0.5vh;
+    font-size: 1.3vh;
+
+    .onlineLabel {
+        color: $hud-text-muted;
+        font-weight: 400;
+    }
+
+    .onlineCount {
+        color: $hud-text;
+        font-weight: 600;
+    }
+}
+
+.serverNameBadge {
+    background: $hud-card-bg;
+}
+
+.playerInfo {
+    display: flex;
+    align-items: center;
+    gap: 1.5vh;
+    padding: 1vh 1.5vh;
+    background: $hud-card-bg;
+    border-radius: 1.2vh;
+    border: 1px solid $hud-border;
+    font-size: 1.3vh;
+
+    .id,
+    .ping,
+    .online {
+        display: flex;
+        align-items: center;
+        gap: 0.5vh;
+        color: $hud-text;
+        text-shadow: 0 0 0.8vh rgba(0, 0, 0, 0.8);
+
+        img {
+            width: 1.8vh;
+            height: 1.8vh;
+            opacity: 0.9;
+        }
+    }
+}
+
+.stars {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5vh;
+    padding: 0.8vh 1.2vh;
+    background: linear-gradient(135deg, rgba(255, 54, 118, 0.25), rgba(255, 54, 118, 0.1));
+    border-radius: 1.2vh;
+    border: 1px solid rgba(255, 54, 118, 0.3);
+
+    img {
+        width: 2.2vh;
+        height: 2.2vh;
+    }
+}
+
+.weaponInfo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.8vh;
+    padding: 1.2vh 1.5vh;
+    background: $hud-card-bg;
+    border-radius: 1.2vh;
+    border: 1px solid $hud-border;
+    min-width: 14vh;
+
+    img {
+        width: 10vh;
+        height: 4vh;
+        transform: rotateY(180deg);
+        object-fit: contain;
+    }
+
+    .ammodata {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5vh;
+        padding: 0.5vh 1vh;
+        background: rgba(0, 0, 0, 0.4);
+        border-radius: 0.6vh;
+        font-size: 1.4vh;
+        color: $hud-text;
+
+        img {
+            width: 1.8vh;
+            height: 1.4vh;
+            transform: none;
+        }
+    }
+}
+
+.cashinfo {
+    display: flex;
+    align-items: center;
+    gap: 1vh;
+    padding: 1vh 1.5vh;
+    background: $hud-card-bg;
+    border-radius: 1.2vh;
+    border: 1px solid $hud-border;
+    font-size: 1.8vh;
+    font-weight: 600;
+    color: $hud-text;
+    text-shadow: 0 0 1vh rgba(0, 0, 0, 0.8);
+
+    img {
+        width: 2.2vh;
+        height: 2.2vh;
+        opacity: 0.9;
+    }
+}
+
+.keybindGuide {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8vh;
+    padding: 1.2vh 0 1.2vh 0;
+    min-width: 18vh;
+}
+
+.keybind {
+    display: flex;
+    align-items: center;
+    gap: 1vh;
+    font-size: 1.4vh;
+    color: $hud-text;
+
+    .key {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 2.8vh;
+        height: 2.4vh;
+        padding: 0 0.6vh;
+        background: rgba(0, 0, 0, 0.5);
+        border-radius: 0.5vh;
+        font-weight: 600;
+        border: 1px solid $hud-border;
+        flex-shrink: 0;
+    }
+
+    .label {
+        color: $hud-text-muted;
+        font-weight: 400;
+    }
+}
+
+.speedo {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    animation: slideUp 0.3s ease-out forwards;
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(5vh);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
         }
     }
 
-    .center {
-        width: 59.25925925925926vh;
-        height: 100%;
+    &::before {
+        content: "";
+        position: absolute;
+        width: 85%;
+        height: 85%;
+        bottom: 1.5vh;
+        right: 1.5vh;
+        z-index: -1;
+        background: $hud-radial;
+        border-radius: 50%;
+        box-shadow: 0 0 3vh rgba(0, 0, 0, 0.6);
     }
 
-    .right {
-        width: 59.25925925925926vh;
-        height: 100%;
-
-
-        .cashinfo {
-            position: absolute;
-            right: 1vh;
-            top: 25vh;
-            font-size:2.5vh;
-            font-family: 'Beast Duh', sans-serif;
-            display: flex;
-            align-items: center;
-            gap: 1vh;
-            justify-content: center;
-            border-radius: .5vh;
-            text-shadow: .1vh .1vh 2vh black;
-            background: $global-bg-transparent;
-
-            .cash {
-                font-family: 'Beast Duh', sans-serif;
-                padding: .2vh;
-            }
-
-            img {
-                width: 2.314814814814815vh;
-                height: 2.314814814814815vh;
-                margin-left: 1vh;
-            }
-        }
-
-        .servername {
-            position: absolute;
-            right: 0vh;
-            top: 1vh;
-            width: 20vh;
-            font-size: 3vh;
-            font-family: 'Beast Duh';
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background-color: transparent;
-            border-radius: .5vh;
-            text-shadow: .1vh .1vh 2vh black;
-            background: $global-bg-transparent;
-
-            .playerInfo {
-                display: flex;
-                font-weight: bold;
-                border-radius: .5vh;
-                gap: 2vh;
-
-                &::before {
-                    content: "";
-
-                    position: absolute;
-                    width: 90%;
-                    height: 1%;
-                    background: $global-bg;
-                    right: 1vh;
-                    top: 3.7vh;
-
-                }
-
-                .id,
-                .ping,
-                .online {
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    flex-direction: row;
-                    font-family: Arial, Helvetica, sans-serif;
-                    font-size: 1.5vh;
-                    text-shadow: 0 0 1vh black;
-
-                    img {
-                        width: 2.314814814814815vh;
-                        height: 2.314814814814815vh;
-                    }
-                }
-
-                .ping {}
-
-                .online {}
-
-
-
-            }
-        }
-
-
-        .stars {
-            position: absolute;
-            top: 8.5vh;
-            right: 0vh;
-            width: 20vh;
-            display: flex;
-            align-items: end;
-            justify-content: center;
-            gap: 0.5vh;
-            background: linear-gradient(to right, rgba(0, 0, 255, 0.473), rgba(255, 0, 0, 0.418));
-            border-radius: .5vh;
-
-            img {
-                width: 2.5vh;
-                height: 2.5vh;
-            }
-        }
-
-        .weaponInfo {
-            position: absolute;
-            top: 13vh;
-            right: 0vh;
-            width: 15vh;
-
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-
-            border-radius: .5vh;
-            background: $global-bg-transparent;
-
-            img {
-                width: 12vh;
-                height: 5vh;
-                transform: rotateY(180deg);
-
-            }
-
-
-            .ammodata {
-                position: relative;
-                bottom: .5vh;
-                background-color: #28272b;
-                border-radius: .5vh;
-                padding: .5vh;
-                font-family: $global-font;
-
-                display: flex;
-                align-items: center;
-                justify-content: center;
-
-                img {
-                    width: 2vh;
-                    height: 1.5vh;
-                }
-            }
-        }
-
-        .keybindGuide {
-            position: absolute;
-            right: 0vh;
-            top: 40vh;
-
-            width: 13vh;
-            display: flex;
-            flex-direction: column;
-            gap: .5vh;
-
-            .keybind {
-                display: flex;
-                align-items: center;
-
-                font-family: $global-font;
-                text-shadow: 0vh 0vh 1vh black;
-                font-size: 1.5vh;
-                border-radius: .5vh;
-
-                background: $global-bg-transparent;
-
-                .key {
-                    background: #28272b;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-
-                    width: 3vh;
-                    height: 3vh;
-
-                    margin-right: 1vh;
-                    border: .3vh solid rgba(255, 0, 0, 0.534);
-                    border-radius: .5vh;
-                    padding: .5vh;
-                }
-            }
-
-        }
-
-        .speedo {
-            position: absolute;
-            bottom: 0;
-            right: 0;
-            animation: slide-left 0.3s ease-in forwards;
-
-            @keyframes slide-left {
-                0% {
-                    bottom: -30vh;
-                }
-
-                100% {
-                    bottom: 0;
-                }
-            }
-
-            &::before {
-                content: "";
-                position: absolute;
-                width: 80%;
-                height: 80%;
-                bottom: 2.5vh;
-                right: 2vh;
-                z-index: -1;
-                background: $global-bg-reverted;
-                box-shadow: 0vh 0vh 2vh black;
-                border-radius: 20vh;
-            }
-
-            svg {
-                width: 25vh;
-                height: 25vh;
-            }
-        }
+    svg {
+        width: 24vh;
+        height: 24vh;
     }
 }

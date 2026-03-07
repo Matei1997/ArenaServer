@@ -369,6 +369,8 @@ export namespace RageShared {
                 isDead: boolean;
                 gender: number;
                 cash: number;
+                health?: number;
+                armour?: number;
                 weapondata: {
                     weapon: string;
                     ammo: number;

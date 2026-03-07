@@ -1,9 +1,12 @@
 import { RAGERP } from "@api";
+import { AccountEntity } from "@entities/Account.entity";
 import { CharacterEntity } from "@entities/Character.entity";
+import { BanEntity } from "@entities/Ban.entity";
 import { inventoryAssets } from "@modules/inventory/Items.module";
 import { RageShared } from "@shared/index";
 import { adminTeleports } from "@assets/Admin.asset";
 import { NativeMenu } from "@classes/NativeMenu.class";
+
 RAGERP.commands.add({
     name: "goto",
     adminlevel: RageShared.Enums.ADMIN_LEVELS.LEVEL_ONE,
@@ -85,7 +88,7 @@ RAGERP.commands.add({
         RAGERP.commands
             .getallCommands()
             .filter((cmd) => {
-                return player.character && typeof cmd.adminlevel === "number" && cmd.adminlevel > 0 && cmd.adminlevel <= player.character.adminlevel;
+                return player.account && typeof cmd.adminlevel === "number" && cmd.adminlevel > 0 && cmd.adminlevel <= player.account.adminlevel;
             })
             .forEach((cmd) => {
                 if (!cmd.adminlevel) return;
@@ -118,7 +121,7 @@ RAGERP.commands.add({
     run: (player: PlayerMp, fulltext: string) => {
         if (!fulltext.length) return RAGERP.chat.sendSyntaxError(player, "/a [text]");
 
-        const admins = mp.players.toArray().filter((x) => x.character && x.character.adminlevel > 0);
+        const admins = mp.players.toArray().filter((x) => x.account && x.account.adminlevel > 0);
 
         admins.forEach((admin) => {
             admin.outputChatBox(`!{#ffff00}[A] ${player.name}: ${fulltext}`);
@@ -132,8 +135,8 @@ RAGERP.commands.add({
     run: (player: PlayerMp) => {
         player.outputChatBox(`${RageShared.Enums.STRINGCOLORS.GREEN}____________[ONLINE ADMINS]____________`);
         mp.players.forEach((target) => {
-            if (target && target.character && target.character.adminlevel) {
-                player.outputChatBox(`${target.name} as level ${target.character.adminlevel} admin.`);
+            if (target && target.account && target.account.adminlevel) {
+                player.outputChatBox(`${target.name} as level ${target.account.adminlevel} admin.`);
             }
         });
     }
@@ -187,11 +190,11 @@ RAGERP.commands.add({
         if (adminLevel < 0 || adminLevel > 6) return player.showNotify(RageShared.Enums.NotifyType.TYPE_ERROR, "Admin level must be between 0 and 6");
 
         const targetPlayer = mp.players.at(targetId);
-        if (!targetPlayer || !mp.players.exists(targetPlayer) || !targetPlayer.character) return player.showNotify(RageShared.Enums.NotifyType.TYPE_ERROR, "Invalid player specified.");
+        if (!targetPlayer || !mp.players.exists(targetPlayer) || !targetPlayer.account) return player.showNotify(RageShared.Enums.NotifyType.TYPE_ERROR, "Invalid player specified.");
 
-        targetPlayer.character.adminlevel = adminLevel;
-        targetPlayer.setVariable("adminLevel", targetPlayer.character.adminlevel);
-        await RAGERP.database.getRepository(CharacterEntity).update(targetPlayer.character.id, { adminlevel: adminLevel });
+        targetPlayer.account.adminlevel = adminLevel;
+        targetPlayer.setVariable("adminLevel", adminLevel);
+        await RAGERP.database.getRepository(AccountEntity).update(targetPlayer.account.id, { adminlevel: adminLevel });
         player.showNotify(RageShared.Enums.NotifyType.TYPE_SUCCESS, `You've successfully made ${targetPlayer.name} an admin level ${adminLevel}`);
         targetPlayer.showNotify(RageShared.Enums.NotifyType.TYPE_INFO, `${player.name} has made you an admin level ${adminLevel}`);
 
@@ -415,5 +418,167 @@ RAGERP.commands.add({
             console.error("Error handling menu selection:", error);
             player.nativemenu?.destroy(player);
         }
+    }
+});
+
+RAGERP.commands.add({
+    name: "listplayers",
+    aliases: ["players", "online"],
+    adminlevel: RageShared.Enums.ADMIN_LEVELS.LEVEL_ONE,
+    description: "List all online players",
+    run: (player: PlayerMp) => {
+        player.outputChatBox(`${RageShared.Enums.STRINGCOLORS.GREEN}____________[ONLINE PLAYERS]____________`);
+        mp.players.forEach((p) => {
+            if (p && mp.players.exists(p)) {
+                const charName = p.character?.name ?? "N/A";
+                player.outputChatBox(`ID ${p.id} | ${p.name} | ${charName} | Ping: ${p.ping} | Dim: ${p.dimension}`);
+            }
+        });
+        player.outputChatBox(`${RageShared.Enums.STRINGCOLORS.GREEN}Total: ${mp.players.length} players`);
+    }
+});
+
+RAGERP.commands.add({
+    name: "kick",
+    adminlevel: RageShared.Enums.ADMIN_LEVELS.LEVEL_ONE,
+    description: "Kick a player",
+    run: (player: PlayerMp, fulltext: string, target: string, ...reasonParts: string[]) => {
+        if (!target) return RAGERP.chat.sendSyntaxError(player, "/kick [player_id] [reason]");
+        const targetId = parseInt(target);
+        if (isNaN(targetId)) return RAGERP.chat.sendSyntaxError(player, "/kick [player_id] [reason]");
+
+        const targetPlayer = mp.players.at(targetId);
+        if (!targetPlayer || !mp.players.exists(targetPlayer)) return player.showNotify(RageShared.Enums.NotifyType.TYPE_ERROR, "Invalid player.");
+
+        const reason = reasonParts.join(" ") || "No reason specified";
+        targetPlayer.outputChatBox(`!{#ff0000}You have been kicked by ${player.name}: ${reason}`);
+
+        setTimeout(() => {
+            if (mp.players.exists(targetPlayer)) targetPlayer.kick(reason);
+        }, 500);
+
+        RAGERP.chat.sendAdminWarning(RageShared.Enums.HEXCOLORS.LIGHTRED, `AdmWarn: ${player.name} kicked ${targetPlayer.name} (${targetPlayer.id}). Reason: ${reason}`);
+        player.showNotify(RageShared.Enums.NotifyType.TYPE_SUCCESS, `Kicked ${targetPlayer.name}.`);
+    }
+});
+
+RAGERP.commands.add({
+    name: "ban",
+    adminlevel: RageShared.Enums.ADMIN_LEVELS.LEVEL_TWO,
+    description: "Ban a player",
+    run: async (player: PlayerMp, fulltext: string, target: string, ...reasonParts: string[]) => {
+        if (!target) return RAGERP.chat.sendSyntaxError(player, "/ban [player_id] [reason] [duration_hours optional]");
+        const targetId = parseInt(target);
+        if (isNaN(targetId)) return RAGERP.chat.sendSyntaxError(player, "/ban [player_id] [reason]");
+
+        const targetPlayer = mp.players.at(targetId);
+        if (!targetPlayer || !mp.players.exists(targetPlayer) || !targetPlayer.account) {
+            return player.showNotify(RageShared.Enums.NotifyType.TYPE_ERROR, "Invalid player.");
+        }
+
+        const reason = reasonParts.join(" ") || "No reason specified";
+
+        const ban = new BanEntity();
+        ban.username = targetPlayer.account.username;
+        ban.ip = targetPlayer.ip;
+        ban.serial = targetPlayer.serial ?? null as any;
+        ban.rsgId = targetPlayer.socialClub ?? null as any;
+        ban.reason = reason;
+        ban.bannedBy = player.name;
+        ban.bannedByLevel = player.account?.adminlevel ?? 0;
+        ban.lifttime = null as any;
+
+        await RAGERP.database.getRepository(BanEntity).save(ban);
+
+        targetPlayer.outputChatBox(`!{#ff0000}You have been banned by ${player.name}: ${reason}`);
+        setTimeout(() => {
+            if (mp.players.exists(targetPlayer)) targetPlayer.kick(`Banned: ${reason}`);
+        }, 500);
+
+        RAGERP.chat.sendAdminWarning(RageShared.Enums.HEXCOLORS.LIGHTRED, `AdmWarn: ${player.name} banned ${targetPlayer.name}. Reason: ${reason}`);
+        player.showNotify(RageShared.Enums.NotifyType.TYPE_SUCCESS, `Banned ${targetPlayer.name}.`);
+    }
+});
+
+RAGERP.commands.add({
+    name: "unban",
+    adminlevel: RageShared.Enums.ADMIN_LEVELS.LEVEL_TWO,
+    description: "Unban a player by username",
+    run: async (player: PlayerMp, fulltext: string, identifier: string) => {
+        if (!identifier) return RAGERP.chat.sendSyntaxError(player, "/unban [username]");
+
+        const ban = await RAGERP.database.getRepository(BanEntity).findOne({ where: { username: identifier } });
+        if (!ban) return player.showNotify(RageShared.Enums.NotifyType.TYPE_ERROR, `No ban found for "${identifier}".`);
+
+        await RAGERP.database.getRepository(BanEntity).remove(ban);
+        RAGERP.chat.sendAdminWarning(RageShared.Enums.HEXCOLORS.LIGHTRED, `AdmWarn: ${player.name} unbanned ${identifier}.`);
+        player.showNotify(RageShared.Enums.NotifyType.TYPE_SUCCESS, `Unbanned ${identifier}.`);
+    }
+});
+
+RAGERP.commands.add({
+    name: "vanish",
+    aliases: ["invisible"],
+    adminlevel: RageShared.Enums.ADMIN_LEVELS.LEVEL_ONE,
+    description: "Toggle invisibility",
+    run: (player: PlayerMp) => {
+        const isVanished = player.getVariable("vanished") ?? false;
+        player.setVariable("vanished", !isVanished);
+        if (!isVanished) {
+            player.alpha = 0;
+            player.showNotify(RageShared.Enums.NotifyType.TYPE_SUCCESS, "Vanish ON — you are invisible.");
+        } else {
+            player.alpha = 255;
+            player.showNotify(RageShared.Enums.NotifyType.TYPE_SUCCESS, "Vanish OFF — you are visible.");
+        }
+        RAGERP.chat.sendAdminWarning(RageShared.Enums.HEXCOLORS.LIGHTRED, `AdmWarn: ${player.name} toggled vanish ${!isVanished ? "ON" : "OFF"}.`);
+    }
+});
+
+RAGERP.commands.add({
+    name: "bird",
+    aliases: ["freecam"],
+    adminlevel: RageShared.Enums.ADMIN_LEVELS.LEVEL_ONE,
+    description: "Toggle bird's-eye freecam (uses noclip)",
+    run: (player: PlayerMp) => {
+        const isNoclip = player.getVariable("noclip") ?? false;
+        if (isNoclip) {
+            player.setVariable("noclip", false);
+            player.call("client::noclip:stop");
+            player.showNotify(RageShared.Enums.NotifyType.TYPE_SUCCESS, "Bird mode OFF.");
+        } else {
+            player.setVariable("noclip", true);
+            player.alpha = 0;
+            player.setVariable("adminLevel", player.account?.adminlevel ?? 1);
+            mp.players.forEach((p) => {
+                if (p.id !== player.id && mp.players.exists(p)) {
+                    p.call("client::player:noclip", [player.id, true]);
+                }
+            });
+            player.showNotify(RageShared.Enums.NotifyType.TYPE_SUCCESS, "Bird mode ON. Press F5 or use /birdoff to exit.");
+        }
+    }
+});
+
+RAGERP.commands.add({
+    name: "birdoff",
+    adminlevel: RageShared.Enums.ADMIN_LEVELS.LEVEL_ONE,
+    description: "Disable bird mode",
+    run: (player: PlayerMp) => {
+        player.setVariable("noclip", false);
+        player.call("client::noclip:stop");
+        player.showNotify(RageShared.Enums.NotifyType.TYPE_SUCCESS, "Bird mode OFF.");
+    }
+});
+
+RAGERP.commands.add({
+    name: "specoff",
+    adminlevel: RageShared.Enums.ADMIN_LEVELS.LEVEL_ONE,
+    description: "Stop spectating",
+    run: (player: PlayerMp) => {
+        player.call("client::spectate:stop");
+        player.setVariable("isSpectating", false);
+        if (player.lastPosition) player.position = player.lastPosition;
+        player.showNotify(RageShared.Enums.NotifyType.TYPE_SUCCESS, "Stopped spectating.");
     }
 });

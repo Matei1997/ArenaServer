@@ -18,9 +18,20 @@ import "@proc/Player.proc";
 //-----------------------------------------//
 import "@modules/GameData.module";
 import "@modules/Keybinding.module";
+import "@modules/Crouch.module";
+import "@modules/HudColor.module";
+import "@modules/DamageSync.module";
+import "@modules/Hitmarker.module";
+import "@modules/Speedometer.module";
+import "@modules/ShootingRange.module";
+import "@modules/AttachEditor.module";
 import "@modules/Noclip.module";
 import "@modules/Nametag.module";
 import "@modules/IdleCamera.module";
+import "@modules/ArenaZone.module";
+import "@modules/Recoil.module";
+import "@modules/WardrobeCamera.module";
+import "@modules/ArenaVitals.module";
 //-----------------------------------------//
 import "@prototype/Player.prototype";
 //-----------------------------------------//

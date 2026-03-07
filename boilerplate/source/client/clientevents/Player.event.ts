@@ -46,10 +46,25 @@ mp.events.add("client::weapon:giveWeapon", async (weapon: number, totalAmmo: num
 mp.events.add("client::player:canAcceptDeath", (enable) => {
     Client.canAcceptDeath = enable;
 });
+mp.events.add("client::player:freeze", (freeze: boolean) => {
+    mp.players.local.freezePosition(freeze);
+});
+
 mp.events.add("client::effects:startScreenEffect", (effectName, duration = 3000, looped = true) => {
     mp.game.graphics.startScreenEffect(effectName, duration, looped);
 });
 
 mp.events.add("client::effects:stopScreenEffect", (effectName) => {
     mp.game.graphics.stopScreenEffect(effectName);
+});
+
+mp.events.add("client::weapon:applyComponents", (weaponHash: number, componentsJson: string) => {
+    try {
+        const components: number[] = JSON.parse(componentsJson);
+        components.forEach(compHash => {
+            (mp.players.local as any).giveWeaponComponent(weaponHash, compHash);
+        });
+    } catch (e) {
+        mp.console.logError("[Weapon] Failed to apply components: " + e);
+    }
 });

@@ -28,6 +28,9 @@
             "@entities/*": [
                 "./database/entity/*"
             ],
+            "@arena/*": [
+                "./arena/*"
+            ],
             "@commands/*": [
                 "./commands/*"
             ],
