@@ -127,6 +127,13 @@
     }
 }
 
+.weaponThumb {
+    width: 3.8vh;
+    height: 3.8vh;
+    object-fit: contain;
+    filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.35));
+}
+
 .weaponIcon {
     width: 3vh;
     height: 3vh;
@@ -163,6 +170,13 @@
     width: 2.4vh;
     height: 2.4vh;
     color: $hud-text-muted;
+}
+
+.weaponPreviewImg {
+    width: 9vh;
+    height: 4vh;
+    object-fit: contain;
+    filter: drop-shadow(0 0 12px rgba(0, 0, 0, 0.4));
 }
 
 .attachments {

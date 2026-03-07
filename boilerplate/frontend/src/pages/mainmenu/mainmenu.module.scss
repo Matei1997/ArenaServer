@@ -39,14 +39,14 @@
 }
 
 .menuMode {
-    background: rgba(2, 2, 6, 0.78);
+    background: rgba(2, 2, 6, 0.45);
 
     &::before {
-        background: radial-gradient(ellipse 120% 100% at 50% 0%, rgba($accent, 0.1) 0%, transparent 45%);
+        background: radial-gradient(ellipse 120% 100% at 50% 0%, rgba($accent, 0.12) 0%, transparent 45%);
     }
 
     &::after {
-        background: linear-gradient(180deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.75) 100%);
+        background: linear-gradient(180deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.75) 100%);
     }
 }
 
@@ -155,7 +155,7 @@
     inset: 0;
     padding: 10vh 4vh 4vh;
     display: grid;
-    grid-template-columns: 26vh 1fr 32vh;
+    grid-template-columns: 26vh 1fr;
     grid-template-rows: 1fr;
     gap: 3vh;
     z-index: 1;
@@ -346,57 +346,65 @@
     z-index: 1;
 }
 
-/* Create match panel */
-.createPanel {
-    grid-column: 3;
+/* Queue panel */
+.queuePanel {
+    grid-column: 2;
     grid-row: 1 / -1;
     display: flex;
     flex-direction: column;
-    padding: 2.5vh;
+    padding: 3vh;
     background: rgba(10, 10, 14, 0.92);
-    backdrop-filter: blur(20px);
+    backdrop-filter: blur(18px);
     border: 1px solid $hud-border;
-    border-radius: 1.4vh;
+    border-radius: 1.6vh;
+    min-height: 40vh;
+    max-width: 60vh;
 }
 
-.createTitle {
-    font-size: 1.6vh;
-    font-weight: 700;
-    color: $hud-text;
-    letter-spacing: 0.05em;
-    margin: 0 0 0.8vh;
-}
-
-.createDesc {
-    font-size: 1.1vh;
-    color: $hud-text-muted;
-    margin: 0 0 2vh;
-    line-height: 1.4;
-}
-
-.createSettings {
+.queueHeader {
     display: flex;
     flex-direction: column;
-    gap: 1vh;
+    gap: 0.6vh;
     margin-bottom: 2vh;
 }
 
-.settingRow {
+.queueTitle {
+    font-size: 2.4vh;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: $hud-text;
+}
+
+.queueSub {
+    font-size: 1.1vh;
+    letter-spacing: 0.2em;
+    color: $hud-text-muted;
+}
+
+.queueStats {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2vh;
+    margin-bottom: 2.5vh;
+}
+
+.queueRow {
     display: flex;
     justify-content: space-between;
     font-size: 1.2vh;
-
-    .settingLabel {
-        color: $hud-text-muted;
-    }
-
-    .settingValue {
-        color: $hud-text;
-        font-weight: 600;
-    }
+    letter-spacing: 0.08em;
 }
 
-.createBtn {
+.queueLabel {
+    color: $hud-text-muted;
+}
+
+.queueValue {
+    color: $hud-text;
+    font-weight: 600;
+}
+
+.queueBtn {
     width: 100%;
     padding: 1.7vh 2vh;
     font-size: 1.4vh;
@@ -409,7 +417,7 @@
     border-radius: 1vh;
     cursor: pointer;
     transition: all 0.25s ease;
-    margin-bottom: 1vh;
+    margin-top: auto;
 
     &:hover:not(:disabled) {
         background: linear-gradient(180deg, $accent 0%, $accent-deep 100%);
@@ -473,7 +481,8 @@
     align-items: center;
     justify-content: center;
     gap: 2vh;
-    padding-top: 4vh;
+    padding-top: 10vh;
+    min-height: calc(100vh - 10vh);
 }
 
 .infoTitle {

@@ -3,7 +3,7 @@ import { observer } from "mobx-react-lite";
 import EventManager from "utils/EventManager.util";
 import { createComponent } from "src/hoc/registerComponent";
 import { playerStore } from "store/Player.store";
-import { IconSkull, IconUsers, IconGun, IconUser } from "src/components/ui/Icons";
+import { IconSkull, IconUsers, IconGun } from "src/components/ui/Icons";
 import style from "./mainmenu.module.scss";
 import LoadoutPanel from "../loadout/LoadoutPanel";
 import ClothingPanel from "../clothing/ClothingPanel";
@@ -16,20 +16,12 @@ const GAME_MODES = [
 
 const HOP_OUT_SIZES = [2, 3, 4, 5] as const;
 
-const FALLBACK_MAPS = [
-    { id: "camp", name: "CAMP", players: "0 / 30", status: "OPEN" },
-    { id: "island", name: "ISLAND", players: "0 / 30", status: "OPEN" },
-    { id: "sawmill", name: "SAWMILL", players: "0 / 30", status: "OPEN" }
-];
-
 const MainMenu: React.FC = observer(() => {
     const [loading, setLoading] = React.useState<string | null>(null);
     const [error, setError] = React.useState<string | null>(null);
     const [activeNav, setActiveNav] = React.useState<"play" | "connect" | "ranking" | "loadout" | "clothing">("play");
     const [gameMode, setGameMode] = React.useState<(typeof GAME_MODES)[number]["id"]>("hopouts");
     const [queueSize, setQueueSize] = React.useState<(typeof HOP_OUT_SIZES)[number]>(2);
-    const [arenaMaps, setArenaMaps] = React.useState<{ id: string; name: string }[]>([]);
-    const [selectedMap, setSelectedMap] = React.useState<string>("");
     const [playerName, setPlayerName] = React.useState<string>("Player");
 
     React.useEffect(() => {
@@ -41,43 +33,26 @@ const MainMenu: React.FC = observer(() => {
         EventManager.addHandler("mainmenu", "setPlayerData", (data: { name: string }) => {
             setPlayerName(data.name || "Player");
         });
-        EventManager.addHandler("mainmenu", "setArenaMaps", (data: { maps: { id: string; name: string }[] }) => {
-            const maps = data?.maps ?? [];
-            setArenaMaps(maps);
-            if (maps.length > 0) {
-                setSelectedMap((prev) => prev || maps[0].id);
-            }
-        });
-        EventManager.emitServer("mainmenu", "getArenaMaps");
         return () => EventManager.removeTargetHandlers("mainmenu");
     }, []);
 
     const handleQueue = React.useCallback(() => {
         setError(null);
         setLoading("arena");
-        const payload: { mode: string; map?: string; size?: number } = { mode: gameMode, map: selectedMap };
+        const payload: { mode: string; size?: number } = { mode: gameMode };
         if (gameMode === "hopouts") payload.size = queueSize;
         EventManager.emitServer("mainmenu", "playArena", JSON.stringify(payload));
         setTimeout(() => setLoading(null), 3000);
-    }, [gameMode, selectedMap, queueSize]);
-
-    const handleFreeroam = React.useCallback(() => {
-        setError(null);
-        setLoading("freeroam");
-        EventManager.emitServer("mainmenu", "playFreeroam");
-        setTimeout(() => setLoading(null), 2000);
-    }, []);
+    }, [gameMode, queueSize]);
 
     const openSettings = React.useCallback(() => {
         EventManager.emitServer("mainmenu", "openSettings");
     }, []);
 
     const isLoading = loading !== null;
-    const mapOptions = arenaMaps.length
-        ? arenaMaps.map((m) => ({ id: m.id, name: m.name, players: "0 / 30", status: "OPEN" }))
-        : FALLBACK_MAPS;
     const displayName = playerName && playerName !== "Player" ? playerName : (playerStore.data.id ? `Player [${playerStore.data.id}]` : "Player");
     const playersLabel = gameMode === "hopouts" ? String(queueSize * 2) : "FREE";
+    const modeLabel = GAME_MODES.find((m) => m.id === gameMode)?.label ?? "HOP OUTS";
 
     React.useEffect(() => {
         EventManager.emitClient("mainmenu", "scene", { showPlayer: activeNav === "clothing" });
@@ -159,58 +134,29 @@ const MainMenu: React.FC = observer(() => {
                         )}
                     </aside>
 
-                    <div className={style.mapGrid}>
-                        {mapOptions.map((map) => (
-                            <button
-                                key={map.id}
-                                className={cn(style.mapCard, selectedMap === map.id && style.mapCardActive)}
-                                onClick={() => setSelectedMap(map.id)}
-                            >
-                                <div className={style.mapPlayers}>
-                                    <IconUser size="1em" /> {map.players}
-                                </div>
-                                <div className={style.mapStatus}>{map.status}</div>
-                                <div className={style.mapName}>{map.name}</div>
-                            </button>
-                        ))}
-                    </div>
-
-                    <aside className={style.createPanel}>
-                        <h2 className={style.createTitle}>CREATE A MATCH</h2>
-                        <p className={style.createDesc}>CREATE A PRIVATE ROOM TO COMPETE WITH YOUR FRIENDS OR JUST TO PRACTICE</p>
-                        <div className={style.createSettings}>
-                            <div className={style.settingRow}>
-                                <span className={style.settingLabel}>MAP:</span>
-                                <span className={style.settingValue}>{mapOptions.find((m) => m.id === selectedMap)?.name ?? "SAWMILL"}</span>
+                    <section className={style.queuePanel}>
+                        <div className={style.queueHeader}>
+                            <span className={style.queueTitle}>{modeLabel}</span>
+                            <span className={style.queueSub}>QUEUE FOR MATCHMAKING</span>
+                        </div>
+                        <div className={style.queueStats}>
+                            <div className={style.queueRow}>
+                                <span className={style.queueLabel}>PLAYERS</span>
+                                <span className={style.queueValue}>{playersLabel}</span>
                             </div>
-                            <div className={style.settingRow}>
-                                <span className={style.settingLabel}>PLAYERS:</span>
-                                <span className={style.settingValue}>{playersLabel}</span>
+                            <div className={style.queueRow}>
+                                <span className={style.queueLabel}>MAP</span>
+                                <span className={style.queueValue}>RANDOM</span>
                             </div>
-                            <div className={style.settingRow}>
-                                <span className={style.settingLabel}>RATE:</span>
-                                <span className={style.settingValue}>500</span>
-                            </div>
-                            <div className={style.settingRow}>
-                                <span className={style.settingLabel}>WEAPON:</span>
-                                <span className={style.settingValue}>RANDOM</span>
-                            </div>
-                            <div className={style.settingRow}>
-                                <span className={style.settingLabel}>MODE:</span>
-                                <span className={style.settingValue}>{GAME_MODES.find((m) => m.id === gameMode)?.label ?? "HOP OUTS"}</span>
-                            </div>
-                            <div className={style.settingRow}>
-                                <span className={style.settingLabel}>ROUNDS:</span>
-                                <span className={style.settingValue}>3</span>
+                            <div className={style.queueRow}>
+                                <span className={style.queueLabel}>WEAPON</span>
+                                <span className={style.queueValue}>ROTATION</span>
                             </div>
                         </div>
-                        <button className={style.createBtn} onClick={handleQueue} disabled={isLoading}>
-                            {loading === "arena" ? "JOINING..." : "CREATE A MATCH"}
+                        <button className={style.queueBtn} onClick={handleQueue} disabled={isLoading}>
+                            {loading === "arena" ? "JOINING..." : "QUEUE"}
                         </button>
-                        <button className={style.freeroamBtn} onClick={handleFreeroam} disabled={isLoading}>
-                            {loading === "freeroam" ? "..." : "FREEROAM"}
-                        </button>
-                    </aside>
+                    </section>
                 </main>
             )}
 

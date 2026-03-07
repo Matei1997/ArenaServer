@@ -101,6 +101,15 @@ const WEAPONS: WeaponDef[] = [
     },
 ];
 
+const WEAPON_IMAGES: Record<string, string> = {
+    weapon_pistol50: new URL("../../assets/images/hud/weapons/weapon_pistol50.svg", import.meta.url).href,
+    weapon_specialcarbine: new URL("../../assets/images/hud/weapons/weapon_specialcarbine.svg", import.meta.url).href,
+    weapon_bullpuprifle: new URL("../../assets/images/hud/weapons/weapon_bullpuprifle.svg", import.meta.url).href,
+    weapon_carbinerifle_mk2: new URL("../../assets/images/hud/weapons/weapon_carbinerifle_mk2.svg", import.meta.url).href,
+    weapon_pumpshotgun: new URL("../../assets/images/hud/weapons/weapon_pumpshotgun.svg", import.meta.url).href,
+    weapon_assaultrifle: new URL("../../assets/images/hud/weapons/weapon_assaultrifle.svg", import.meta.url).href,
+};
+
 const CATEGORIES = ["clip", "muzzle", "grip", "scope", "barrel", "flashlight", "skin"] as const;
 const WEAPON_CATEGORIES: { id: WeaponCategory; label: string }[] = [
     { id: "rifles", label: "RIFLES" },
@@ -136,6 +145,7 @@ const LoadoutPanel: React.FC = () => {
     const filteredWeapons = WEAPONS.filter((w) => w.category === selectedCategory);
     const weapon = filteredWeapons[selectedWeapon] ?? filteredWeapons[0] ?? WEAPONS[0];
     const weaponEquipped = equipped[weapon.weaponName] || {};
+    const weaponImage = WEAPON_IMAGES[weapon.weaponName];
 
     const toggleComponent = (comp: WeaponComp) => {
         const newEquipped = { ...equipped };
@@ -190,9 +200,13 @@ const LoadoutPanel: React.FC = () => {
                             className={`${style.weaponBtn} ${i === selectedWeapon ? style.active : ""}`}
                             onClick={() => setSelectedWeapon(i)}
                         >
-                            <span className={style.weaponIcon} style={{ background: w.accent }}>
-                                {w.icon}
-                            </span>
+                            {WEAPON_IMAGES[w.weaponName] ? (
+                                <img className={style.weaponThumb} src={WEAPON_IMAGES[w.weaponName]} alt={w.displayName} />
+                            ) : (
+                                <span className={style.weaponIcon} style={{ background: w.accent }}>
+                                    {w.icon}
+                                </span>
+                            )}
                             <span className={style.weaponLabel}>{w.displayName}</span>
                         </button>
                     ))}
@@ -202,7 +216,11 @@ const LoadoutPanel: React.FC = () => {
             <div className={style.attachments}>
                 <div className={style.weaponHeader}>
                     <div className={style.weaponPreview}>
-                        <IconGun className={style.weaponSvg} />
+                        {weaponImage ? (
+                            <img className={style.weaponPreviewImg} src={weaponImage} alt={weapon.displayName} />
+                        ) : (
+                            <IconGun className={style.weaponSvg} />
+                        )}
                         <div className={style.weaponTitle}>{weapon.displayName}</div>
                     </div>
                 </div>
