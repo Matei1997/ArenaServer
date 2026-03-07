@@ -3,7 +3,7 @@
 .lobby {
     position: fixed;
     inset: 0;
-    background: #010101;
+    background: rgba(2, 2, 6, 0.45);
     font-family: $global-font;
     overflow: hidden;
     -webkit-font-smoothing: antialiased;
@@ -23,6 +23,18 @@
         inset: 0;
         background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.5) 100%);
         pointer-events: none;
+    }
+}
+
+.sceneMode {
+    background: rgba(2, 2, 6, 0.2);
+
+    &::before {
+        background: radial-gradient(ellipse 120% 100% at 50% 0%, rgba($accent, 0.06) 0%, transparent 55%);
+    }
+
+    &::after {
+        background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.35) 100%);
     }
 }
 
@@ -176,6 +188,39 @@
 
     .modeTabActive & {
         opacity: 1;
+    }
+}
+
+/* Hop outs size selector */
+.sizeTabs {
+    grid-column: 1;
+    display: flex;
+    gap: 0.6vh;
+    margin-top: 0.8vh;
+}
+
+.sizeTab {
+    padding: 0.7vh 1.4vh;
+    font-size: 1.05vh;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: $hud-text-muted;
+    background: rgba(10, 10, 14, 0.6);
+    border: 1px solid $hud-border;
+    border-radius: 0.6vh;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+        color: $hud-text;
+        border-color: rgba(255, 255, 255, 0.18);
+    }
+
+    &.sizeTabActive {
+        color: $hud-text;
+        background: rgba($accent, 0.18);
+        border-color: rgba($accent, 0.45);
+        box-shadow: 0 0 1.6vh rgba($accent, 0.25);
     }
 }
 

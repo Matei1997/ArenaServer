@@ -14,6 +14,8 @@ const GAME_MODES = [
     { id: "gungame", label: "GUN GAME", Icon: IconGun }
 ] as const;
 
+const HOP_OUT_SIZES = [2, 3, 4, 5] as const;
+
 const FALLBACK_MAPS = [
     { id: "camp", name: "CAMP", players: "0 / 30", status: "OPEN" },
     { id: "island", name: "ISLAND", players: "0 / 30", status: "OPEN" },
@@ -25,6 +27,7 @@ const MainMenu: React.FC = observer(() => {
     const [error, setError] = React.useState<string | null>(null);
     const [activeNav, setActiveNav] = React.useState<"play" | "connect" | "ranking" | "loadout" | "clothing">("play");
     const [gameMode, setGameMode] = React.useState<(typeof GAME_MODES)[number]["id"]>("hopouts");
+    const [queueSize, setQueueSize] = React.useState<(typeof HOP_OUT_SIZES)[number]>(2);
     const [arenaMaps, setArenaMaps] = React.useState<{ id: string; name: string }[]>([]);
     const [selectedMap, setSelectedMap] = React.useState<string>("");
     const [playerName, setPlayerName] = React.useState<string>("Player");
@@ -52,9 +55,11 @@ const MainMenu: React.FC = observer(() => {
     const handleQueue = React.useCallback(() => {
         setError(null);
         setLoading("arena");
-        EventManager.emitServer("mainmenu", "playArena", JSON.stringify({ mode: gameMode, map: selectedMap }));
+        const payload: { mode: string; map?: string; size?: number } = { mode: gameMode, map: selectedMap };
+        if (gameMode === "hopouts") payload.size = queueSize;
+        EventManager.emitServer("mainmenu", "playArena", JSON.stringify(payload));
         setTimeout(() => setLoading(null), 3000);
-    }, [gameMode, selectedMap]);
+    }, [gameMode, selectedMap, queueSize]);
 
     const handleFreeroam = React.useCallback(() => {
         setError(null);
@@ -72,9 +77,10 @@ const MainMenu: React.FC = observer(() => {
         ? arenaMaps.map((m) => ({ id: m.id, name: m.name, players: "0 / 30", status: "OPEN" }))
         : FALLBACK_MAPS;
     const displayName = playerName && playerName !== "Player" ? playerName : (playerStore.data.id ? `Player [${playerStore.data.id}]` : "Player");
+    const playersLabel = gameMode === "hopouts" ? String(queueSize * 2) : "FREE";
 
     return (
-        <div className={style.lobby}>
+        <div className={cn(style.lobby, activeNav === "clothing" && style.sceneMode)}>
             <header className={style.navBar}>
                 <div className={style.navLeft}>
                     <div className={style.logo}>
@@ -126,6 +132,20 @@ const MainMenu: React.FC = observer(() => {
                         ))}
                     </div>
 
+                    {gameMode === "hopouts" && (
+                        <div className={style.sizeTabs}>
+                            {HOP_OUT_SIZES.map((size) => (
+                                <button
+                                    key={size}
+                                    className={cn(style.sizeTab, queueSize === size && style.sizeTabActive)}
+                                    onClick={() => setQueueSize(size)}
+                                >
+                                    {size}v{size}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
                     <div className={style.mapGrid}>
                         {mapOptions.map((map) => (
                             <button
@@ -152,7 +172,7 @@ const MainMenu: React.FC = observer(() => {
                             </div>
                             <div className={style.settingRow}>
                                 <span className={style.settingLabel}>PLAYERS:</span>
-                                <span className={style.settingValue}>6</span>
+                                <span className={style.settingValue}>{playersLabel}</span>
                             </div>
                             <div className={style.settingRow}>
                                 <span className={style.settingLabel}>RATE:</span>
