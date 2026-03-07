@@ -143,90 +143,124 @@
     inset: 0;
     padding: 10vh 4vh 4vh;
     display: grid;
-    grid-template-columns: 1fr 32vh;
-    grid-template-rows: auto 1fr;
+    grid-template-columns: 26vh 1fr 32vh;
+    grid-template-rows: 1fr;
     gap: 3vh;
     z-index: 1;
 }
 
-/* Game mode tabs */
-.modeTabs {
+/* Left mode column */
+.modeColumn {
     grid-column: 1;
     display: flex;
-    gap: 0.5vh;
+    flex-direction: column;
+    gap: 1.6vh;
 }
 
-.modeTab {
+.modeList {
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 1vh;
-    padding: 1.2vh 2.5vh;
-    font-size: 1.2vh;
-    font-weight: 600;
-    font-family: inherit;
-    letter-spacing: 0.06em;
-    color: $hud-text-muted;
-    background: transparent;
-    border: none;
-    border-bottom: 2px solid transparent;
+}
+
+.modeCard {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8vh;
+    padding: 1.2vh;
+    background: rgba(10, 10, 14, 0.7);
+    border: 1px solid $hud-border;
+    border-radius: 1.2vh;
+    text-align: left;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
+    color: $hud-text;
 
     &:hover {
-        color: rgba(255, 255, 255, 0.9);
+        border-color: rgba(255, 255, 255, 0.18);
+        transform: translateY(-1px);
     }
 
-    &.modeTabActive {
-        color: $hud-text;
-        border-bottom-color: $accent;
-    }
-}
-
-.modeTabIcon {
-    flex-shrink: 0;
-    opacity: 0.7;
-
-    .modeTabActive & {
-        opacity: 1;
+    &.modeCardActive {
+        border-color: rgba($accent, 0.6);
+        box-shadow: 0 0 2vh rgba($accent, 0.2);
     }
 }
 
-/* Hop outs size selector */
-.sizeTabs {
-    grid-column: 1;
+.modeThumb {
+    height: 7.2vh;
+    border-radius: 0.8vh;
+    background:
+        linear-gradient(180deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.7) 100%),
+        radial-gradient(circle at 20% 20%, rgba($accent, 0.35), transparent 55%),
+        rgba(25, 25, 35, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.modeMeta {
     display: flex;
-    gap: 0.6vh;
-    margin-top: 0.8vh;
+    flex-direction: column;
+    gap: 0.2vh;
 }
 
-.sizeTab {
-    padding: 0.7vh 1.4vh;
-    font-size: 1.05vh;
-    font-weight: 600;
+.modeName {
+    font-size: 1.3vh;
+    font-weight: 700;
     letter-spacing: 0.08em;
+}
+
+.modeHint {
+    font-size: 0.95vh;
+    letter-spacing: 0.18em;
     color: $hud-text-muted;
-    background: rgba(10, 10, 14, 0.6);
+}
+
+.sizeList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8vh;
+    padding-top: 0.6vh;
+}
+
+.sizeCard {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2vh;
+    padding: 1vh 1.4vh;
+    background: rgba(10, 10, 14, 0.7);
     border: 1px solid $hud-border;
-    border-radius: 0.6vh;
+    border-radius: 1vh;
+    text-align: left;
     cursor: pointer;
     transition: all 0.2s ease;
 
     &:hover {
-        color: $hud-text;
         border-color: rgba(255, 255, 255, 0.18);
     }
 
-    &.sizeTabActive {
-        color: $hud-text;
-        background: rgba($accent, 0.18);
-        border-color: rgba($accent, 0.45);
-        box-shadow: 0 0 1.6vh rgba($accent, 0.25);
+    &.sizeCardActive {
+        border-color: rgba($accent, 0.6);
+        background: rgba($accent, 0.12);
+        box-shadow: 0 0 1.8vh rgba($accent, 0.2);
     }
+}
+
+.sizeLabel {
+    font-size: 1.25vh;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: $hud-text;
+}
+
+.sizeSub {
+    font-size: 0.9vh;
+    letter-spacing: 0.2em;
+    color: $hud-text-muted;
 }
 
 /* Map selection grid */
 .mapGrid {
-    grid-column: 1;
+    grid-column: 2;
     display: flex;
     gap: 2vh;
     align-items: stretch;
@@ -302,7 +336,7 @@
 
 /* Create match panel */
 .createPanel {
-    grid-column: 2;
+    grid-column: 3;
     grid-row: 1 / -1;
     display: flex;
     flex-direction: column;
