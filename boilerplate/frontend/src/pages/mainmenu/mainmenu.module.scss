@@ -38,6 +38,18 @@
     }
 }
 
+.menuMode {
+    background: rgba(2, 2, 6, 0.78);
+
+    &::before {
+        background: radial-gradient(ellipse 120% 100% at 50% 0%, rgba($accent, 0.1) 0%, transparent 45%);
+    }
+
+    &::after {
+        background: linear-gradient(180deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.75) 100%);
+    }
+}
+
 .navBar {
     position: absolute;
     top: 0;

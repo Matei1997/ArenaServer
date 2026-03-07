@@ -79,8 +79,15 @@ const MainMenu: React.FC = observer(() => {
     const displayName = playerName && playerName !== "Player" ? playerName : (playerStore.data.id ? `Player [${playerStore.data.id}]` : "Player");
     const playersLabel = gameMode === "hopouts" ? String(queueSize * 2) : "FREE";
 
+    React.useEffect(() => {
+        EventManager.emitClient("mainmenu", "scene", { showPlayer: activeNav === "clothing" });
+        return () => {
+            EventManager.emitClient("mainmenu", "scene", { showPlayer: true });
+        };
+    }, [activeNav]);
+
     return (
-        <div className={cn(style.lobby, activeNav === "clothing" && style.sceneMode)}>
+        <div className={cn(style.lobby, activeNav === "clothing" ? style.sceneMode : style.menuMode)}>
             <header className={style.navBar}>
                 <div className={style.navLeft}>
                     <div className={style.logo}>
