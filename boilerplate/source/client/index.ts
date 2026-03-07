@@ -32,6 +32,7 @@ import "@modules/ArenaZone.module";
 import "@modules/Recoil.module";
 import "@modules/WardrobeCamera.module";
 import "@modules/ArenaVitals.module";
+import "@modules/MainMenuScene.module";
 //-----------------------------------------//
 import "@prototype/Player.prototype";
 //-----------------------------------------//

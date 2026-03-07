@@ -640,12 +640,18 @@ function buildMatchUpdate(match) {
         weaponName: getWeaponRoundName(match.currentRound),
         redAlive: getAlivePlayers(match, "red").length,
         blueAlive: getAlivePlayers(match, "blue").length,
-        redTeam: match.redTeam.map((p) => ({
-            id: p.id, name: p.name, kills: p.kills, deaths: p.deaths, alive: p.alive
-        })),
-        blueTeam: match.blueTeam.map((p) => ({
-            id: p.id, name: p.name, kills: p.kills, deaths: p.deaths, alive: p.alive
-        })),
+        redTeam: match.redTeam.map((p) => {
+            const mp_ = mp.players.at(p.id);
+            const health = mp_ && mp.players.exists(mp_) ? Math.max(0, Math.min(100, mp_.health - 100)) : 0;
+            const armor = mp_ && mp.players.exists(mp_) ? Math.max(0, Math.min(100, mp_.armour)) : 0;
+            return { id: p.id, name: p.name, kills: p.kills, deaths: p.deaths, alive: p.alive, health, armor };
+        }),
+        blueTeam: match.blueTeam.map((p) => {
+            const mp_ = mp.players.at(p.id);
+            const health = mp_ && mp.players.exists(mp_) ? Math.max(0, Math.min(100, mp_.health - 100)) : 0;
+            const armor = mp_ && mp.players.exists(mp_) ? Math.max(0, Math.min(100, mp_.armour)) : 0;
+            return { id: p.id, name: p.name, kills: p.kills, deaths: p.deaths, alive: p.alive, health, armor };
+        }),
         timeLeft
     };
 }
@@ -742,7 +748,7 @@ function beginRound(match) {
             200
         ]);
     });
-    (0, ZoneSystem_1.startZone)(match.dimension, zoneCenter.x, zoneCenter.y);
+    (0, ZoneSystem_1.startZone)(match.dimension, zoneCenter.x, zoneCenter.y, ArenaConfig_1.ARENA_CONFIG.warmupDuration * 1000);
     setTimeout(() => {
         if (!activeMatches.has(match.dimension))
             return;
