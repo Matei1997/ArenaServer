@@ -76,7 +76,7 @@ for (const cat of WEAPON_CATEGORIES) {
 }
 
 const RECOIL_MULTIPLIER = 2.2;
-const RECOIL_STEP = 0.7;
+const RECOIL_STEP = 0.18; // Lower = smoother recoil spread over frames (was 0.7, caused snap)
 const AIM_MULTIPLIER = 1.6;
 
 let recoilModifier = 1.0;

@@ -1,18 +1,17 @@
-$arena-accent: #8b5cf6;
-$arena-green: #22c55e;
+@import "../../styles/vars.scss";
 
 .arena {
     position: absolute;
     width: 100vw;
     height: 100vh;
-    background: #0a0a0e;
-    font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: $global-color;
+    font-family: $global-font;
 
     &::before {
         position: absolute;
         content: "";
         inset: 0;
-        background: radial-gradient(ellipse 100% 80% at 50% 0%, rgba(139, 92, 246, 0.1) 0%, transparent 50%);
+        background: radial-gradient(ellipse 100% 80% at 50% 0%, rgba($accent, 0.08) 0%, transparent 50%);
         pointer-events: none;
     }
 }
@@ -24,18 +23,18 @@ $arena-green: #22c55e;
     align-items: center;
     justify-content: center;
     flex-direction: column;
-    font-size: 3.2vh;
+    font-size: 2.8vh;
     font-weight: 700;
-    letter-spacing: 0.1em;
-    color: white;
+    letter-spacing: 0.12em;
+    color: $hud-text;
     text-shadow: 0 0.2vh 1vh rgba(0, 0, 0, 0.5);
 
     .desc {
-        font-size: 1.6vh;
+        font-size: 1.4vh;
         font-weight: 500;
         text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: rgba(255, 255, 255, 0.7);
+        letter-spacing: 0.1em;
+        color: $hud-text-muted;
         margin-top: 0.5vh;
     }
 }
@@ -46,78 +45,80 @@ $arena-green: #22c55e;
     flex-wrap: wrap;
     align-items: center;
     justify-content: center;
-    margin-top: 6vh;
-    gap: 2vh;
+    margin-top: 5vh;
+    gap: 1.5vh;
 }
 
 .playerCard {
     font-family: inherit;
-    border-radius: 1.2vh;
-    width: 28vh;
-    height: 12vh;
-    background: rgba(14, 14, 18, 0.9);
+    border-radius: 0.8vh;
+    width: 26vh;
+    height: 11vh;
+    background: $glass-panel;
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: 1px solid $glass-border;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    transition: all 0.25s;
-    box-shadow: 0 0.5vh 2vh rgba(0, 0, 0, 0.3);
+    transition: all 0.2s;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
 
     &:hover {
-        border-color: rgba(255, 255, 255, 0.1);
-        box-shadow: 0 0.6vh 2.5vh rgba(0, 0, 0, 0.4);
+        border-color: $hud-border-strong;
+        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
     }
 
     .playerName {
-        font-size: 1.5vh;
+        font-size: 1.4vh;
         font-weight: 600;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.06em;
         text-transform: uppercase;
+        color: $hud-text;
     }
 
     .ready {
-        font-size: 1.1vh;
+        font-size: 1vh;
         font-weight: 600;
         letter-spacing: 0.08em;
-        color: $arena-green;
-        margin-top: 0.6vh;
+        color: $success;
+        margin-top: 0.5vh;
     }
 }
 
 .countdown,
 .timer {
     position: relative;
-    margin-top: 4vh;
-    font-size: 7vh;
+    margin-top: 3.5vh;
+    font-size: 6vh;
     font-weight: 800;
     text-align: center;
-    color: rgba(255, 255, 255, 0.95);
-    text-shadow: 0 0 2vh rgba(139, 92, 246, 0.4);
+    color: $hud-text;
+    text-shadow: 0 0 2vh rgba($accent, 0.35);
     letter-spacing: 0.05em;
 }
 
 .leaveBtn {
     position: relative;
-    margin-top: 5vh;
+    margin-top: 4vh;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 1.5vh;
+    font-size: 1.3vh;
     font-weight: 600;
     letter-spacing: 0.1em;
-    background: rgba(255, 255, 255, 0.05);
-    color: rgba(255, 255, 255, 0.8);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 1.4vh 3.5vh;
-    border-radius: 1vh;
+    background: transparent;
+    color: $hud-text-muted;
+    border: 1px solid $glass-border;
+    padding: 1.2vh 3vh;
+    border-radius: 0.6vh;
     cursor: pointer;
-    transition: all 0.25s;
+    transition: all 0.2s;
+    font-family: inherit;
 
     &:hover {
-        border-color: rgba(139, 92, 246, 0.5);
-        background: rgba(139, 92, 246, 0.15);
-        color: white;
+        border-color: rgba($accent, 0.5);
+        background: rgba($accent, 0.12);
+        color: $hud-text;
     }
 }
 
@@ -126,71 +127,71 @@ $arena-green: #22c55e;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-top: 6vh;
-    gap: 2.5vh;
+    margin-top: 5vh;
+    gap: 2vh;
 }
 
 .mapCard {
     font-family: inherit;
-    border-radius: 1.4vh;
-    width: 28vh;
-    height: 45vh;
-    background: rgba(14, 14, 18, 0.95);
+    border-radius: 1vh;
+    width: 26vh;
+    height: 42vh;
+    background: $glass-panel;
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: 2px solid $glass-border;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: flex-end;
-    padding-bottom: 2.5vh;
+    padding-bottom: 2vh;
     cursor: pointer;
-    transition: all 0.25s ease;
+    transition: all 0.2s ease;
     position: relative;
     overflow: hidden;
-    box-shadow: 0 0.5vh 2vh rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
 
     &::before {
         content: "";
         position: absolute;
         inset: 0;
-        background: radial-gradient(ellipse 80% 60% at 50% 100%, rgba(139, 92, 246, 0.1) 0%, transparent 60%);
+        background: radial-gradient(ellipse 80% 60% at 50% 100%, rgba($accent, 0.06) 0%, transparent 60%);
         pointer-events: none;
     }
 
     &:hover {
-        transform: translateY(-3px);
-        border-color: rgba(255, 255, 255, 0.12);
-        box-shadow: 0 0.8vh 3vh rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(139, 92, 246, 0.2);
+        transform: translateY(-4px);
+        border-color: $hud-border-strong;
+        box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba($accent, 0.15);
     }
 
     &.mapCardSelected {
-        border-color: rgba(139, 92, 246, 0.6);
-        box-shadow: 0 0.6vh 2.5vh rgba(139, 92, 246, 0.25);
+        border-color: $accent;
+        box-shadow: 0 6px 24px rgba($accent, 0.25), 0 0 0 1px rgba($accent, 0.3);
     }
 
     .mapName {
-        font-size: 2vh;
+        font-size: 1.8vh;
         font-weight: 700;
         letter-spacing: 0.08em;
         text-transform: uppercase;
-        color: white;
+        color: $hud-text;
         z-index: 1;
     }
 
     .voteCount {
-        font-size: 1.4vh;
+        font-size: 1.2vh;
         font-weight: 500;
-        margin-top: 0.8vh;
-        color: rgba(255, 255, 255, 0.7);
+        margin-top: 0.6vh;
+        color: $hud-text-muted;
         z-index: 1;
     }
 
     .voteCheck {
         position: absolute;
-        top: 1.5vh;
-        right: 1.5vh;
-        font-size: 2vh;
-        color: $arena-green;
+        top: 1.2vh;
+        right: 1.2vh;
+        font-size: 1.8vh;
+        color: $success;
         font-weight: bold;
         z-index: 1;
     }

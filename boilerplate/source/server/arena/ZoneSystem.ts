@@ -92,6 +92,7 @@ export function tickZones(): void {
         }
 
         const radius = getCurrentRadius(zone);
+        const safeRadius = Number.isFinite(radius) && radius > 0 ? Math.round(radius) : 200;
         const phaseTimeLeft = Math.max(0, Math.ceil((zone.phaseDuration - (now - zone.phaseStartedAt)) / 1000));
 
         const allPlayers = [...match.redTeam, ...match.blueTeam];
@@ -140,7 +141,7 @@ export function tickZones(): void {
             (RAGERP.cef.emit as Function)(p, "arena", "zoneUpdate", {
                 centerX: zone.centerX,
                 centerY: zone.centerY,
-                radius: Math.round(radius),
+                radius: safeRadius,
                 phase: zone.currentPhase + 1,
                 totalPhases: ZONE_PHASES.length,
                 phaseTimeLeft,

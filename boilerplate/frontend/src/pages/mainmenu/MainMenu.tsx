@@ -3,15 +3,14 @@ import { observer } from "mobx-react-lite";
 import EventManager from "utils/EventManager.util";
 import { createComponent } from "src/hoc/registerComponent";
 import { playerStore } from "store/Player.store";
-import { IconSkull, IconUsers, IconGun } from "src/components/ui/Icons";
 import style from "./mainmenu.module.scss";
 import LoadoutPanel from "../loadout/LoadoutPanel";
 import ClothingPanel from "../clothing/ClothingPanel";
 
 const GAME_MODES = [
-    { id: "hopouts", label: "HOP OUTS", Icon: IconSkull },
-    { id: "ffa", label: "FREE FOR ALL", Icon: IconUsers },
-    { id: "gungame", label: "GUN GAME", Icon: IconGun }
+    { id: "hopouts", label: "HOP OUTS" },
+    { id: "ffa", label: "FREE FOR ALL" },
+    { id: "gungame", label: "GUN GAME" }
 ] as const;
 
 const HOP_OUT_SIZES = [2, 3, 4, 5] as const;
@@ -45,13 +44,19 @@ const MainMenu: React.FC = observer(() => {
         setTimeout(() => setLoading(null), 3000);
     }, [gameMode, queueSize]);
 
+    const handleFreeroam = React.useCallback(() => {
+        setError(null);
+        setLoading("freeroam");
+        EventManager.emitServer("mainmenu", "playFreeroam");
+        setTimeout(() => setLoading(null), 2000);
+    }, []);
+
     const openSettings = React.useCallback(() => {
         EventManager.emitServer("mainmenu", "openSettings");
     }, []);
 
     const isLoading = loading !== null;
     const displayName = playerName && playerName !== "Player" ? playerName : (playerStore.data.id ? `Player [${playerStore.data.id}]` : "Player");
-    const playersLabel = gameMode === "hopouts" ? String(queueSize * 2) : "FREE";
     const modeLabel = GAME_MODES.find((m) => m.id === gameMode)?.label ?? "HOP OUTS";
 
     React.useEffect(() => {
@@ -101,62 +106,75 @@ const MainMenu: React.FC = observer(() => {
 
             {activeNav === "play" && (
                 <main className={style.mainContent}>
-                    <aside className={style.modeColumn}>
-                        <div className={style.modeList}>
-                            {GAME_MODES.map((mode) => (
-                                <button
-                                    key={mode.id}
-                                    className={cn(style.modeCard, gameMode === mode.id && style.modeCardActive)}
-                                    onClick={() => setGameMode(mode.id)}
-                                >
-                                    <div className={style.modeThumb} />
-                                    <div className={style.modeMeta}>
-                                        <span className={style.modeName}>{mode.label}</span>
-                                        <span className={style.modeHint}>PVP PLAYLIST</span>
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
+                    <div className={style.modeTabs}>
+                        {GAME_MODES.map((mode) => (
+                            <button
+                                key={mode.id}
+                                className={cn(style.modeTab, gameMode === mode.id && style.modeTabActive)}
+                                onClick={() => setGameMode(mode.id)}
+                            >
+                                {mode.label}
+                            </button>
+                        ))}
+                    </div>
 
+                    <section className={style.queueCard}>
+                        <div className={style.queueMode}>
+                            <span className={style.queueModeLabel}>{modeLabel}</span>
+                            <span className={style.queueModeArrows}>‹ ›</span>
+                        </div>
                         {gameMode === "hopouts" && (
-                            <div className={style.sizeList}>
+                            <div className={style.sizeRow}>
                                 {HOP_OUT_SIZES.map((size) => (
                                     <button
                                         key={size}
-                                        className={cn(style.sizeCard, queueSize === size && style.sizeCardActive)}
+                                        className={cn(style.sizeChip, queueSize === size && style.sizeChipActive)}
                                         onClick={() => setQueueSize(size)}
                                     >
-                                        <div className={style.sizeLabel}>{size}V{size}</div>
-                                        <div className={style.sizeSub}>HOP OUTS</div>
+                                        {size}v{size}
                                     </button>
                                 ))}
                             </div>
                         )}
-                    </aside>
-
-                    <section className={style.queuePanel}>
-                        <div className={style.queueHeader}>
-                            <span className={style.queueTitle}>{modeLabel}</span>
-                            <span className={style.queueSub}>QUEUE FOR MATCHMAKING</span>
-                        </div>
-                        <div className={style.queueStats}>
-                            <div className={style.queueRow}>
-                                <span className={style.queueLabel}>PLAYERS</span>
-                                <span className={style.queueValue}>{playersLabel}</span>
-                            </div>
-                            <div className={style.queueRow}>
-                                <span className={style.queueLabel}>MAP</span>
-                                <span className={style.queueValue}>RANDOM</span>
-                            </div>
-                            <div className={style.queueRow}>
-                                <span className={style.queueLabel}>WEAPON</span>
-                                <span className={style.queueValue}>ROTATION</span>
-                            </div>
-                        </div>
                         <button className={style.queueBtn} onClick={handleQueue} disabled={isLoading}>
                             {loading === "arena" ? "JOINING..." : "QUEUE"}
                         </button>
+                        <button
+                            className={style.freeroamBtn}
+                            onClick={handleFreeroam}
+                            disabled={isLoading}
+                            title="Enter freeroam. Use /fdim to set your dimension."
+                        >
+                            {loading === "freeroam" ? "ENTERING..." : "FREEROAM"}
+                        </button>
                     </section>
+
+                    <aside className={style.socialPanel}>
+                        <div className={style.socialSection}>
+                            <div className={style.socialTitle}>YOUR PROFILE</div>
+                            <div className={style.socialName}>{displayName}</div>
+                            <div className={style.socialRank}>BRONZE I</div>
+                            <div className={style.socialBadges}>BADGES</div>
+                            <div className={style.socialLevel}>LEVEL 1</div>
+                            <div className={style.socialXp}>0 / 500 XP</div>
+                        </div>
+                        <div className={style.socialSection}>
+                            <div className={style.socialTitle}>YOUR LOBBY</div>
+                            <div className={style.socialSearch}>
+                                <span className={style.searchIcon}>⌕</span>
+                                <input type="text" placeholder="Search..." className={style.searchInput} readOnly />
+                            </div>
+                            <div className={style.inviteSlots}>
+                                {[1, 2, 3].map((i) => (
+                                    <div key={i} className={style.inviteSlot}>
+                                        <span className={style.invitePlus}>+</span>
+                                        <span className={style.inviteLabel}>INVITE FRIEND</span>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className={style.friendsList}>FRIENDS LIST</div>
+                        </div>
+                    </aside>
                 </main>
             )}
 

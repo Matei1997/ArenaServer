@@ -31,6 +31,7 @@ import "@events/Point.event";
 import "@events/Wardrobe.event";
 import "@events/MainMenu.event";
 import "@events/PlayerMenu.event";
+import "@events/Admin.event";
 import "@arena/ArenaMatch.manager";
 import "@events/Arena.event";
 //---------------------------------------//

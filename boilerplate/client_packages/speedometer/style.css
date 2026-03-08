@@ -51,6 +51,22 @@ html, body {
     box-shadow: 0 0 8px rgba(230, 57, 70, 0.6);
 }
 
+.gear-badge {
+    position: absolute;
+    left: 85px;
+    top: 95px;
+    width: 30px;
+    height: 24px;
+    font-family: "Segoe UI", Arial, sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    text-align: center;
+    line-height: 24px;
+    color: white;
+    background: rgba(40,39,43,0.9);
+    border-radius: 4px;
+}
+
 #speedValue {
     position: absolute;
     width: 200px;
@@ -66,4 +82,28 @@ html, body {
         0 0 5px rgba(255,255,255,0.8),
         0 0 15px rgba(255,255,255,0.5),
         0 0 30px rgba(230,57,70,0.4);
+}
+
+.status-row {
+    position: absolute;
+    left: 20px;
+    bottom: 15px;
+    display: flex;
+    gap: 8px;
+}
+
+.status-icon {
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: rgba(0,0,0,0.5);
+    color: rgba(255,255,255,0.4);
+}
+
+.status-icon.on {
+    color: #5cff80;
+}
+
+.status-icon.off {
+    color: rgba(255,100,100,0.8);
 }

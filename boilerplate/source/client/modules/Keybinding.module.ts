@@ -41,18 +41,35 @@ function playerPressEscape() {
 PlayerKeybind.addKeybind({ keyCode: 27, up: false }, playerPressEscape, "Close Pages");
 
 PlayerKeybind.addKeybind(
+    { keyCode: 116, up: false },
+    () => {
+        const adminLevel = mp.players.local.getVariable("adminLevel");
+        if (!adminLevel || adminLevel <= 0) return;
+        if (Browser.currentPage === "admin") {
+            Browser.closePage();
+        } else {
+            Browser.processEvent("cef::system:setPage", "admin");
+        }
+    },
+    "Admin panel (F5)"
+);
+
+PlayerKeybind.addKeybind(
     { keyCode: 113, up: false },
     () => {
         if (!mp.players.local.getVariable("loggedin") || Client.isDead) return;
+        if (Browser.currentPage === "arena_hud") {
+            // In hopouts, F2 only toggles cursor for clicking (e.g. LEAVE button), not player menu
+            Browser.toggleCursorForClick();
+            return;
+        }
         if (Browser.currentPage === "playerMenu") {
             Browser.closePage();
         } else if (!Browser.currentPage || Browser.currentPage === "hud") {
             Browser.processEvent("cef::system:setPage", "playerMenu");
-        } else if (Browser.currentPage === "arena_hud") {
-            Browser.processEvent("cef::system:setPage", "playerMenu");
         }
     },
-    "Player menu (F2)"
+    "Player menu (F2) / Hopouts cursor (F2)"
 );
 
 // Hold right-click in clothing menu to orbit camera and view character

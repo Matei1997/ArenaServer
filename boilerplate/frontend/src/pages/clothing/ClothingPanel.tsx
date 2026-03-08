@@ -64,12 +64,12 @@ const ClothingPanel: React.FC = observer(() => {
     return (
         <div className={style.clothing}>
             <div className={style.header}>
-                <span className={style.title}>CHARACTER CLOTHING</span>
+                <span className={style.title}>CLOTHING</span>
                 <span className={style.subtitle}>Customize your outfit. Changes preview in real-time.</span>
             </div>
 
             <div className={style.content}>
-                <div className={style.catTabs}>
+                <div className={style.catTabs} role="tablist">
                     {CLOTHING_CATS.map((cat) => (
                         <button
                             key={cat.id}
@@ -87,7 +87,7 @@ const ClothingPanel: React.FC = observer(() => {
                 </div>
 
                 <div className={style.editor}>
-                    <div className={style.editorTitle}>{activeCat.toUpperCase()}</div>
+                    <div className={style.editorTitle}>Selected: {activeCat}</div>
 
                     <div className={style.sliderGroup}>
                         <label className={style.sliderLabel}>

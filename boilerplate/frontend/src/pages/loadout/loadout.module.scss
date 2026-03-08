@@ -1,276 +1,392 @@
 @import "../../styles/vars.scss";
 
 .loadout {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    height: 100%;
-    padding: 3vh;
-    gap: 1.6vh;
+    position: absolute;
+    top: 4vh;
+    left: 3vh;
+    right: 3vh;
+    bottom: 3vh;
     font-family: $global-font;
     color: $hud-text;
-    overflow-y: auto;
-
-    &::-webkit-scrollbar {
-        width: 4px;
-    }
-    &::-webkit-scrollbar-thumb {
-        background: $accent;
-        border-radius: 2px;
-    }
-    &::-webkit-scrollbar-track {
-        background: transparent;
-    }
-}
-
-.header {
+    overflow: hidden;
     display: flex;
     flex-direction: column;
-    gap: 0.5vh;
+    background: linear-gradient(165deg, rgba(12, 10, 18, 0.98) 0%, rgba(8, 6, 14, 0.99) 100%);
+    border: 1px solid $glass-border;
+    border-radius: 0.6vh;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
-.title {
-    font-size: 2.2vh;
+.loadoutHeader {
+    display: flex;
+    align-items: center;
+    gap: 2vh;
+    padding: 1.2vh 1.8vh;
+    border-bottom: 1px solid $glass-border;
+    flex-shrink: 0;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.35) 0%, transparent 100%);
+}
+
+.loadoutTitle {
+    font-size: 1.6vh;
     font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.2em;
-    color: $accent-light;
+    letter-spacing: 0.12em;
+    color: $hud-text;
+    margin: 0;
 }
 
-.subtitle {
-    font-size: 1.3vh;
+.catTabs {
+    display: flex;
+    gap: 0.3vh;
+    flex: 1;
+    justify-content: center;
+}
+
+.catTab {
+    padding: 0.5vh 1.2vh;
+    font-size: 1vh;
+    font-weight: 600;
+    letter-spacing: 0.05em;
     color: $hud-text-muted;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 0.4vh;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+
+    &:hover {
+        color: $hud-text;
+        background: rgba(255, 255, 255, 0.04);
+    }
+
+    &.catTabActive {
+        color: #fff;
+        background: linear-gradient(180deg, rgba($accent, 0.3) 0%, rgba($accent, 0.15) 100%);
+        border-color: rgba($accent, 0.45);
+    }
+}
+
+.escHint {
+    font-size: 0.9vh;
+    color: $hud-text-muted;
+    letter-spacing: 0.06em;
+}
+
+.loadoutGrid {
+    display: grid;
+    grid-template-columns: 20vh 1fr 24vh;
+    gap: 0;
+    flex: 1;
+    min-height: 0;
+}
+
+.weaponSidebar {
+    padding: 1vh;
+    border-right: 1px solid $glass-border;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.15);
+
+    &::-webkit-scrollbar {
+        width: 3px;
+    }
+    &::-webkit-scrollbar-thumb {
+        background: rgba($accent, 0.5);
+        border-radius: 2px;
+    }
 }
 
 .weaponList {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.6vh;
-    padding: 0.6vh;
-    border: 1px solid $hud-border;
-    border-radius: 0.8vh;
-    background: rgba(0, 0, 0, 0.25);
-}
-
-.weaponGrid {
-    display: grid;
-    grid-template-columns: 16vh 1fr;
-    gap: 1.2vh;
-    align-items: start;
-}
-
-.categoryList {
+    list-style: none;
+    margin: 0;
+    padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.6vh;
-    padding: 0.6vh;
-    border: 1px solid $hud-border;
-    border-radius: 0.8vh;
-    background: rgba(0, 0, 0, 0.25);
+    gap: 0.3vh;
 }
 
-.categoryBtn {
-    padding: 0.7vh 1vh;
-    font-size: 1vh;
-    font-weight: 700;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: $hud-text-muted;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 0.6vh;
-    cursor: pointer;
-    transition: all 0.15s ease;
-
-    &:hover {
-        color: $hud-text;
-        background: $accent-dim;
-        border-color: $accent;
-    }
-}
-
-.categoryActive {
-    color: #fff;
-    background: linear-gradient(120deg, $accent-deep, $accent);
-    border-color: $accent-light;
-    box-shadow: 0 0 10px rgba(89, 27, 135, 0.45);
-}
-
-.weaponBtn {
+.weaponItem {
     display: flex;
     align-items: center;
     gap: 0.8vh;
-    padding: 0.7vh 1.4vh;
-    font-size: 1.1vh;
-    font-weight: 600;
-    font-family: $global-font;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    border: 1px solid $hud-border;
-    border-radius: 0.6vh;
-    background: rgba(255, 255, 255, 0.03);
+    padding: 0.7vh 0.9vh;
+    font-size: 0.95vh;
+    font-family: inherit;
+    border: 1px solid transparent;
+    border-radius: 0.4vh;
+    background: rgba(0, 0, 0, 0.2);
     color: $hud-text-muted;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all 0.2s ease;
+    text-align: left;
+    width: 100%;
 
     &:hover {
-        background: $accent-dim;
+        background: rgba(255, 255, 255, 0.04);
         color: $hud-text;
-        border-color: $accent;
     }
 
-    &.active {
-        background: linear-gradient(120deg, $accent-deep, $accent);
+    &.weaponItemActive {
+        background: linear-gradient(90deg, rgba($accent, 0.2) 0%, rgba($accent, 0.08) 100%);
         color: #fff;
-        border-color: $accent-light;
-        box-shadow: 0 0 10px rgba(89, 27, 135, 0.45);
+        border-color: rgba($accent, 0.4);
     }
 }
 
 .weaponThumb {
-    width: 3.8vh;
-    height: 3.8vh;
+    width: 2.2vh;
+    height: 1.6vh;
     object-fit: contain;
-    filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.35));
+    flex-shrink: 0;
+    filter: brightness(0.9);
 }
 
 .weaponIcon {
-    width: 3vh;
-    height: 3vh;
-    border-radius: 0.6vh;
+    width: 2.2vh;
+    height: 1.6vh;
+    border-radius: 0.25vh;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 1vh;
+    font-size: 0.65vh;
     font-weight: 700;
-    letter-spacing: 0.1em;
-    color: #fff;
-    box-shadow: 0 0 8px rgba(0, 0, 0, 0.35);
+    color: rgba(255, 255, 255, 0.9);
+    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.weaponItemInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1vh;
+    min-width: 0;
 }
 
 .weaponLabel {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.6vh;
+    font-weight: 600;
+    font-size: 0.95vh;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.weaponHeader {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+.weaponCat {
+    font-size: 0.75vh;
+    color: $hud-text-muted;
+    text-transform: capitalize;
 }
 
 .weaponPreview {
+    position: relative;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 1vh;
+    justify-content: center;
+    padding: 2vh;
+    background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.8) 100%);
+    min-height: 0;
 }
 
-.weaponSvg {
-    width: 2.4vh;
-    height: 2.4vh;
-    color: $hud-text-muted;
+.previewBg {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    background-size: 2vh 2vh;
+    opacity: 0.6;
+    pointer-events: none;
 }
 
-.weaponPreviewImg {
-    width: 9vh;
-    height: 4vh;
+.previewImg {
+    position: relative;
+    max-width: 80%;
+    max-height: 65%;
     object-fit: contain;
-    filter: drop-shadow(0 0 12px rgba(0, 0, 0, 0.4));
+    filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 24px rgba($accent, 0.15));
+}
+
+.previewSvg {
+    position: relative;
+    width: 10vh;
+    height: 5vh;
+    color: $hud-text-muted;
+    opacity: 0.5;
+}
+
+.previewLabel {
+    position: absolute;
+    bottom: 1.2vh;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15vh;
+}
+
+.previewName {
+    font-size: 1.2vh;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: $hud-text;
+}
+
+.previewCat {
+    font-size: 0.8vh;
+    color: $hud-text-muted;
+    text-transform: capitalize;
 }
 
 .attachments {
     display: flex;
     flex-direction: column;
-    gap: 1.2vh;
-    background: linear-gradient(180deg, rgba(10, 10, 14, 0.95), rgba(10, 10, 14, 0.75));
-    border: 1px solid $hud-border;
-    border-radius: 0.8vh;
-    padding: 2vh;
-    box-shadow: 0 0 22px rgba(0, 0, 0, 0.35);
+    gap: 1vh;
+    padding: 1.2vh 1.4vh;
+    border-left: 1px solid $glass-border;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.15);
+
+    &::-webkit-scrollbar {
+        width: 3px;
+    }
+    &::-webkit-scrollbar-thumb {
+        background: rgba($accent, 0.5);
+        border-radius: 2px;
+    }
 }
 
-.weaponTitle {
-    font-size: 1.6vh;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.18em;
-    color: $hud-text;
-}
-
-
-.category {
+.attSection {
     display: flex;
     flex-direction: column;
     gap: 0.5vh;
 }
 
-.catLabel {
-    font-size: 0.95vh;
+.attSectionTitle {
+    font-size: 0.9vh;
     font-weight: 700;
-    color: $accent-light;
-    letter-spacing: 0.2em;
-    padding-bottom: 0.3vh;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    color: $hud-text-muted;
+    letter-spacing: 0.08em;
+    margin: 0 0 0.2vh 0;
+    text-transform: uppercase;
 }
 
-.compList {
+.compGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6vh;
+}
+
+.compGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3vh;
+}
+
+.catLabel {
+    font-size: 0.8vh;
+    font-weight: 600;
+    color: $hud-text-muted;
+    letter-spacing: 0.06em;
+    display: flex;
+    align-items: center;
+    gap: 0.3vh;
+}
+
+.catIcon {
+    opacity: 0.7;
+}
+
+.compRow {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.6vh;
+    gap: 0.3vh;
 }
 
 .compBtn {
-    display: flex;
-    align-items: center;
-    gap: 0.6vh;
-    padding: 0.55vh 1.1vh;
-    font-size: 1.05vh;
-    font-family: $global-font;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 0.4vh;
-    background: rgba(255, 255, 255, 0.02);
+    padding: 0.5vh 0.9vh;
+    font-size: 0.85vh;
+    font-family: inherit;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 0.35vh;
+    background: rgba(0, 0, 0, 0.25);
     color: $hud-text-muted;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all 0.2s ease;
+    white-space: normal;
+    text-align: left;
+    min-width: fit-content;
 
     &:hover {
-        background: rgba(255, 255, 255, 0.06);
+        background: rgba(255, 255, 255, 0.05);
         color: $hud-text;
-        border-color: rgba(255, 255, 255, 0.18);
+        border-color: rgba(255, 255, 255, 0.12);
     }
 
     &.compActive {
-        background: rgba(89, 27, 135, 0.25);
-        color: $hud-text;
-        border-color: $accent;
-        box-shadow: 0 0 8px $accent-glow;
+        background: linear-gradient(135deg, rgba($accent, 0.25) 0%, rgba($accent-light, 0.15) 100%);
+        color: #fff;
+        border-color: rgba($accent, 0.45);
     }
 }
 
-.compName {
-    font-weight: 600;
-    letter-spacing: 0.04em;
+.statsSection {
+    padding-top: 0.5vh;
+    border-top: 1px solid $glass-border;
+}
+
+.statBars {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5vh;
+}
+
+.statRow {
+    display: flex;
+    align-items: center;
+    gap: 0.8vh;
+}
+
+.statLabel {
+    font-size: 0.85vh;
+    color: $hud-text-muted;
+    min-width: 7vh;
+}
+
+.statBar {
+    flex: 1;
+    height: 0.45vh;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 0.2vh;
+    overflow: hidden;
+}
+
+.statFill {
+    height: 100%;
+    background: linear-gradient(90deg, rgba($accent, 0.9) 0%, rgba($accent-light, 0.7) 100%);
+    border-radius: 0.2vh;
+    transition: width 0.25s ease;
 }
 
 .saveBtn {
-    margin-top: 1vh;
-    padding: 0.9vh 2.2vh;
-    font-size: 1.2vh;
+    margin-top: auto;
+    padding: 0.8vh 1.4vh;
+    font-size: 0.95vh;
     font-weight: 700;
-    font-family: $global-font;
-    text-transform: uppercase;
-    letter-spacing: 0.18em;
-    border: 1px solid $accent;
-    border-radius: 0.6vh;
-    background: linear-gradient(120deg, $accent-deep, $accent);
+    font-family: inherit;
+    letter-spacing: 0.08em;
+    border: 1px solid rgba($accent, 0.5);
+    border-radius: 0.4vh;
+    background: linear-gradient(180deg, rgba($accent, 0.35) 0%, rgba($accent, 0.2) 100%);
     color: #fff;
     cursor: pointer;
     transition: all 0.2s ease;
-    align-self: flex-start;
+    align-self: stretch;
+    text-transform: uppercase;
 
-    &:hover {
-        background: linear-gradient(120deg, $accent, $accent-light);
+    &:hover:not(:disabled) {
+        background: linear-gradient(180deg, rgba($accent, 0.45) 0%, rgba($accent, 0.3) 100%);
+        border-color: $accent;
     }
 
     &:disabled {

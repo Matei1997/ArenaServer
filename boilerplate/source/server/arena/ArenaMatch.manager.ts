@@ -288,15 +288,18 @@ function beginRound(match: ArenaMatchData): void {
     const zoneCenter = getZoneCenter(match.preset);
     match.zoneCenter = zoneCenter;
 
+    const cx = Number(zoneCenter?.x ?? match.preset.center?.x ?? 0);
+    const cy = Number(zoneCenter?.y ?? match.preset.center?.y ?? 0);
+    const initRadius = 200;
+    if (!Number.isFinite(cx) || !Number.isFinite(cy) || initRadius <= 0) {
+        console.warn("[Hopouts] Invalid zone center, using preset center");
+    }
+
     getAllMatchPlayerMps(match).forEach((p) => {
-        p.call("client::arena:zoneInit", [
-            zoneCenter.x,
-            zoneCenter.y,
-            200
-        ]);
+        p.call("client::arena:zoneInit", [cx, cy, initRadius]);
     });
 
-    startZone(match.dimension, zoneCenter.x, zoneCenter.y, ARENA_CONFIG.warmupDuration * 1000);
+    startZone(match.dimension, cx, cy, ARENA_CONFIG.warmupDuration * 1000);
 
     setTimeout(() => {
         if (!activeMatches.has(match.dimension)) return;

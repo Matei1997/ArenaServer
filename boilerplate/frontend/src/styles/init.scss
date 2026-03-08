@@ -19,11 +19,12 @@ html {
     font-size: 1.2037037037037037vh;
     color: white;
     overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 body {
     width: 100vw;
     height: 100vh;
-       //background: url('../assets/images/bg.png') no-repeat;
-       //background-size: cover;
+    font-family: "Poppins", "Inter", system-ui, sans-serif;
 }

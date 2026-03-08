@@ -31,33 +31,44 @@ const boneMultipliers: Record<string, number> = {
     Left_Food: 1
 };
 
-// baseDamage and minDamage (sync uses /10 scale)
-const weaponDamage: Record<string, { base: number; min: number }> = {
-    [String(mp.joaat("weapon_pistol"))]: { base: 20, min: 10 },
-    [String(mp.joaat("weapon_pistol_mk2"))]: { base: 20, min: 10 },
-    [String(mp.joaat("weapon_combatpistol"))]: { base: 20, min: 10 },
-    [String(mp.joaat("weapon_heavypistol"))]: { base: 20, min: 10 },
-    [String(mp.joaat("weapon_appistol"))]: { base: 20, min: 10 },
-    [String(mp.joaat("weapon_pistol50"))]: { base: 20, min: 10 },
-    [String(mp.joaat("weapon_microsmg"))]: { base: 20, min: 8 },
-    [String(mp.joaat("weapon_smg"))]: { base: 20, min: 8 },
-    [String(mp.joaat("weapon_assaultrifle"))]: { base: 28, min: 10 },
-    [String(mp.joaat("weapon_assaultrifle_mk2"))]: { base: 23, min: 10 },
-    [String(mp.joaat("weapon_carbinerifle"))]: { base: 23, min: 6 },
-    [String(mp.joaat("weapon_specialcarbine"))]: { base: 23, min: 10 },
-    [String(mp.joaat("weapon_sniperrifle"))]: { base: 40, min: 5 },
-    [String(mp.joaat("weapon_heavysniper"))]: { base: 40, min: 5 },
-    [String(mp.joaat("weapon_pumpshotgun"))]: { base: 30, min: 5 },
-    [String(mp.joaat("weapon_sawnoffshotgun"))]: { base: 30, min: 5 },
-    [String(mp.joaat("weapon_mg"))]: { base: 13, min: 5 }
+// Per-weapon damage: base/min for body, head for headshots (neverDM-style).
+// Head uses explicit value when set; otherwise boneMultiplier applies.
+const weaponDamage: Record<string, { base: number; min: number; head?: number }> = {
+    [String(mp.joaat("weapon_pistol"))]: { base: 18, min: 9, head: 35 },
+    [String(mp.joaat("weapon_pistol_mk2"))]: { base: 20, min: 10, head: 40 },
+    [String(mp.joaat("weapon_combatpistol"))]: { base: 20, min: 10, head: 40 },
+    [String(mp.joaat("weapon_heavypistol"))]: { base: 22, min: 10, head: 45 },
+    [String(mp.joaat("weapon_appistol"))]: { base: 16, min: 8, head: 32 },
+    [String(mp.joaat("weapon_pistol50"))]: { base: 24, min: 12, head: 50 },
+    [String(mp.joaat("weapon_microsmg"))]: { base: 14, min: 8, head: 28 },
+    [String(mp.joaat("weapon_smg"))]: { base: 16, min: 10, head: 32 },
+    [String(mp.joaat("weapon_assaultrifle"))]: { base: 22, min: 10, head: 45 },
+    [String(mp.joaat("weapon_assaultrifle_mk2"))]: { base: 24, min: 10, head: 48 },
+    [String(mp.joaat("weapon_carbinerifle"))]: { base: 22, min: 8, head: 44 },
+    [String(mp.joaat("weapon_carbinerifle_mk2"))]: { base: 24, min: 10, head: 48 },
+    [String(mp.joaat("weapon_specialcarbine"))]: { base: 22, min: 10, head: 44 },
+    [String(mp.joaat("weapon_bullpuprifle"))]: { base: 22, min: 10, head: 44 },
+    [String(mp.joaat("weapon_advancedrifle"))]: { base: 22, min: 10, head: 44 },
+    [String(mp.joaat("weapon_sniperrifle"))]: { base: 55, min: 35, head: 100 },
+    [String(mp.joaat("weapon_heavysniper"))]: { base: 55, min: 45, head: 100 },
+    [String(mp.joaat("weapon_heavysniper_mk2"))]: { base: 65, min: 50, head: 120 },
+    [String(mp.joaat("weapon_pumpshotgun"))]: { base: 45, min: 35, head: 55 },
+    [String(mp.joaat("weapon_sawnoffshotgun"))]: { base: 40, min: 30, head: 50 },
+    [String(mp.joaat("weapon_assaultshotgun"))]: { base: 35, min: 25, head: 50 },
+    [String(mp.joaat("weapon_combatshotgun"))]: { base: 40, min: 30, head: 55 },
+    [String(mp.joaat("weapon_mg"))]: { base: 18, min: 12, head: 35 },
+    [String(mp.joaat("weapon_combatmg"))]: { base: 18, min: 14, head: 36 },
+    [String(mp.joaat("weapon_combatpdw"))]: { base: 16, min: 10, head: 32 },
+    [String(mp.joaat("weapon_compactrifle"))]: { base: 20, min: 10, head: 40 }
 };
 
 function getBoneMultiplier(bone: string): number {
     return boneMultipliers[bone] ?? DEFAULT_BONE_MULT;
 }
 
-function getWeaponDamage(weaponHash: string, distance: number): number {
+function getWeaponDamage(weaponHash: string, distance: number, isHead: boolean): number {
     const w = weaponDamage[weaponHash] ?? { base: DEFAULT_WEAPON_BASE, min: DEFAULT_WEAPON_MIN };
+    if (isHead && w.head !== undefined) return Math.min(w.head, 200);
     let dmg = w.base / (distance / DAMAGE_RANGE_DIVISOR);
     if (dmg > w.base) dmg = w.base;
     if (dmg < w.min) dmg = w.min;
@@ -81,8 +92,9 @@ mp.events.add("server:PlayerHit", (shooter: PlayerMp, victimId: number, targetBo
     }
 
     const distance = Utils.distanceToPos(shooter.position, victim.position);
-    const weaponDmg = getWeaponDamage(weaponHash, Math.max(1, distance));
-    const boneMult = getBoneMultiplier(targetBone);
+    const isHead = targetBone === "Head";
+    const weaponDmg = getWeaponDamage(weaponHash, Math.max(1, distance), isHead);
+    const boneMult = isHead ? 1 : getBoneMultiplier(targetBone);
     const finalDamage = weaponDmg * boneMult;
 
     const from = shooter.position;

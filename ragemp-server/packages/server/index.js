@@ -487,7 +487,7 @@ exports.ZONE_PHASES = [
     { duration: 30, endRadius: 10, dps: 10 },
 ];
 exports.ITEM_CONFIG = {
-    medkit: { castTime: 3000, heal: 60, maxHp: 100, countPerRound: 3 },
+    medkit: { castTime: 3000, heal: 100, maxHp: 100, countPerRound: 3 },
     plate: { castTime: 2000, armor: 25, maxArmor: 100, countPerRound: 5 },
 };
 exports.ARENA_AMMO = 999;
@@ -741,14 +741,16 @@ function beginRound(match) {
     emitMatchUpdate(match);
     const zoneCenter = getZoneCenter(match.preset);
     match.zoneCenter = zoneCenter;
+    const cx = Number(zoneCenter?.x ?? match.preset.center?.x ?? 0);
+    const cy = Number(zoneCenter?.y ?? match.preset.center?.y ?? 0);
+    const initRadius = 200;
+    if (!Number.isFinite(cx) || !Number.isFinite(cy) || initRadius <= 0) {
+        console.warn("[Hopouts] Invalid zone center, using preset center");
+    }
     getAllMatchPlayerMps(match).forEach((p) => {
-        p.call("client::arena:zoneInit", [
-            zoneCenter.x,
-            zoneCenter.y,
-            200
-        ]);
+        p.call("client::arena:zoneInit", [cx, cy, initRadius]);
     });
-    (0, ZoneSystem_1.startZone)(match.dimension, zoneCenter.x, zoneCenter.y, ArenaConfig_1.ARENA_CONFIG.warmupDuration * 1000);
+    (0, ZoneSystem_1.startZone)(match.dimension, cx, cy, ArenaConfig_1.ARENA_CONFIG.warmupDuration * 1000);
     setTimeout(() => {
         if (!activeMatches.has(match.dimension))
             return;
@@ -1297,6 +1299,104 @@ exports.WEAPON_ATTACHMENTS = [
             { hash: 1319990579, name: "Yusuf Amir Luxury Finish", category: "skin", recoilModifier: 1.0 },
         ]
     },
+    {
+        weaponHash: 1593441988,
+        weaponName: "weapon_combatpistol",
+        displayName: "Combat Pistol",
+        components: [
+            { hash: 119655033, name: "Default Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 3596571437, name: "Extended Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 899381934, name: "Flashlight", category: "flashlight", recoilModifier: 1.0 },
+            { hash: 3271853210, name: "Suppressor", category: "muzzle", recoilModifier: 0.95 },
+            { hash: 3328267634, name: "Yusuf Amir Luxury Finish", category: "skin", recoilModifier: 1.0 },
+        ]
+    },
+    {
+        weaponHash: 3523564046,
+        weaponName: "weapon_heavypistol",
+        displayName: "Heavy Pistol",
+        components: [
+            { hash: 222992026, name: "Default Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 1694090795, name: "Extended Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 899381934, name: "Flashlight", category: "flashlight", recoilModifier: 1.0 },
+            { hash: 3271853210, name: "Suppressor", category: "muzzle", recoilModifier: 0.95 },
+            { hash: 2053799099, name: "Etched Wood Grip Finish", category: "skin", recoilModifier: 1.0 },
+        ]
+    },
+    {
+        weaponHash: 736523883,
+        weaponName: "weapon_smg",
+        displayName: "SMG",
+        components: [
+            { hash: 643830487, name: "Default Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 889916667, name: "Extended Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 2041522294, name: "Drum Magazine", category: "clip", recoilModifier: 1.0 },
+            { hash: 2076495324, name: "Flashlight", category: "flashlight", recoilModifier: 1.0 },
+            { hash: 1006670047, name: "Scope", category: "scope", recoilModifier: 1.0 },
+            { hash: 3271853210, name: "Suppressor", category: "muzzle", recoilModifier: 0.9 },
+            { hash: 663517328, name: "Yusuf Amir Luxury Finish", category: "skin", recoilModifier: 1.0 },
+        ]
+    },
+    {
+        weaponHash: 171789620,
+        weaponName: "weapon_combatpdw",
+        displayName: "Combat PDW",
+        components: [
+            { hash: 1129462574, name: "Default Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 859604227, name: "Extended Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 1857608283, name: "Drum Magazine", category: "clip", recoilModifier: 1.0 },
+            { hash: 2076495324, name: "Flashlight", category: "flashlight", recoilModifier: 1.0 },
+            { hash: 2855028148, name: "Scope", category: "scope", recoilModifier: 1.0 },
+            { hash: 202788691, name: "Grip", category: "grip", recoilModifier: 0.8 },
+        ]
+    },
+    {
+        weaponHash: 2210333304,
+        weaponName: "weapon_carbinerifle",
+        displayName: "Carbine Rifle",
+        components: [
+            { hash: 3334989185, name: "Default Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 2089537806, name: "Extended Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 2076495324, name: "Flashlight", category: "flashlight", recoilModifier: 1.0 },
+            { hash: 2698550338, name: "Scope", category: "scope", recoilModifier: 1.0 },
+            { hash: 2805810788, name: "Suppressor", category: "muzzle", recoilModifier: 0.9 },
+            { hash: 202788691, name: "Grip", category: "grip", recoilModifier: 0.8 },
+        ]
+    },
+    {
+        weaponHash: 2937143193,
+        weaponName: "weapon_advancedrifle",
+        displayName: "Advanced Rifle",
+        components: [
+            { hash: 3193891350, name: "Default Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 2971750299, name: "Extended Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 2076495324, name: "Flashlight", category: "flashlight", recoilModifier: 1.0 },
+            { hash: 2855028148, name: "Scope", category: "scope", recoilModifier: 1.0 },
+            { hash: 2805810788, name: "Suppressor", category: "muzzle", recoilModifier: 0.9 },
+            { hash: 202788691, name: "Grip", category: "grip", recoilModifier: 0.8 },
+        ]
+    },
+    {
+        weaponHash: 3800352039,
+        weaponName: "weapon_assaultshotgun",
+        displayName: "Assault Shotgun",
+        components: [
+            { hash: 2498213963, name: "Default Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 2258927634, name: "Extended Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 2076495324, name: "Flashlight", category: "flashlight", recoilModifier: 1.0 },
+            { hash: 2205435306, name: "Suppressor", category: "muzzle", recoilModifier: 0.92 },
+            { hash: 202788691, name: "Grip", category: "grip", recoilModifier: 0.8 },
+        ]
+    },
+    {
+        weaponHash: 984333226,
+        weaponName: "weapon_combatshotgun",
+        displayName: "Combat Shotgun",
+        components: [
+            { hash: 2076495324, name: "Flashlight", category: "flashlight", recoilModifier: 1.0 },
+            { hash: 2205435306, name: "Suppressor", category: "muzzle", recoilModifier: 0.92 },
+        ]
+    },
 ];
 const attachmentsByHash = new Map(exports.WEAPON_ATTACHMENTS.map(w => [w.weaponHash, w]));
 function getWeaponAttachments(hash) {
@@ -1476,6 +1576,7 @@ function tickZones() {
             }
         }
         const radius = getCurrentRadius(zone);
+        const safeRadius = Number.isFinite(radius) && radius > 0 ? Math.round(radius) : 200;
         const phaseTimeLeft = Math.max(0, Math.ceil((zone.phaseDuration - (now - zone.phaseStartedAt)) / 1000));
         const allPlayers = [...match.redTeam, ...match.blueTeam];
         const playersToKill = [];
@@ -1521,7 +1622,7 @@ function tickZones() {
             _api_1.RAGERP.cef.emit(p, "arena", "zoneUpdate", {
                 centerX: zone.centerX,
                 centerY: zone.centerY,
-                radius: Math.round(radius),
+                radius: safeRadius,
                 phase: zone.currentPhase + 1,
                 totalPhases: ArenaConfig_1.ZONE_PHASES.length,
                 phaseTimeLeft,

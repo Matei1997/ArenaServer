@@ -1,171 +1,110 @@
-@import '../../../../styles/vars';
+@import "../../../../styles/vars.scss";
 
 .security {
     display: flex;
+    flex-direction: column;
+    gap: 1.5vh;
+}
 
-    .row {
-        display: flex;
-        flex-direction: column;
+.row {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2vh;
+}
 
-        .header {
-            margin-bottom: 3.148148148148148vh;
-            font-family: 'Beast Duh', sans-serif;
-            font-size: 2.1296296296296293vh;
-            color: #EAEAEA;
+.header {
+    font-size: 1.5vh;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: $hud-text;
+    text-transform: uppercase;
+    margin-bottom: 0.5vh;
+}
+
+.box {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5vh;
+
+    .title {
+        font-size: 1.1vh;
+        font-weight: 600;
+        color: $hud-text-muted;
+        letter-spacing: 0.05em;
+    }
+}
+
+.password,
+.input {
+    display: flex;
+    align-items: center;
+    gap: 0.8vh;
+    padding: 0.8vh 1vh;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid $glass-border;
+    border-radius: $radius-sm;
+    transition: border-color 0.2s;
+
+    &:focus-within {
+        border-color: rgba($accent, 0.4);
+    }
+
+    input {
+        flex: 1;
+        outline: none;
+        border: none;
+        background: none;
+        font-family: $global-font;
+        font-size: 1.2vh;
+        color: $hud-text;
+
+        &::placeholder {
+            color: $hud-text-muted;
         }
+    }
 
-        .box {
-            display: flex;
-            flex-direction: column;
+    .img {
+        width: 2vh;
+        height: 2vh;
+        background: url(../../../../assets/images/settings/hidden.svg) no-repeat center;
+        background-size: contain;
+        cursor: pointer;
+        opacity: 0.6;
+        transition: opacity 0.2s;
 
-            .title {
-                font-family: Arial, Helvetica, sans-serif;
-                font-size: 1.3888888888888888vh;
-                color: #EAEAEA;
-            }
-
-            .password {
-                margin-top: 1.2962962962962963vh;
-                margin-bottom: 0.37037037037037035vh;
-
-                display: flex;
-                align-items: center;
-
-                & input {
-                    outline: none;
-                    border: none;
-                    background: none;
-                    margin-top: -0.7407407407407407vh;
-
-                    width: 26.11111111111111vh;
-
-                    font-family: Arial, Helvetica, sans-serif;
-                    font-size: 1.3888888888888888vh;
-                    color: #EAEAEA;
-                }
-
-                .img {
-                    margin-left: 0.7407407407407407vh;
-                    width: 2.7777777777777777vh;
-                    height: 2.222222222222222vh;
-
-                    background: url(../../../../assets/images/settings/hidden.svg) no-repeat;
-                    background-size: cover;
-
-                    transition: all 0.3s;
-
-
-                }
-            }
-
-            .input {
-                margin-top: 1.759259259259259vh;
-                padding-left: 0.9259259259259258vh;
-                padding-right: 0.9259259259259258vh;
-
-                width: 29.074074074074073vh;
-                height: 4.259259259259259vh;
-
-                border: 0.18518518518518517vh solid rgba(174, 186, 248, 0.2);
-                background: rgba(0, 0, 0, 0.2);
-
-                display: flex;
-                align-items: center;
-
-                & input {
-                    outline: none;
-                    border: none;
-                    background: none;
-                    margin-top: -0.27777777777777773vh;
-
-                    width: 26.11111111111111vh;
-
-                    font-family: Arial, Helvetica, sans-serif;
-                    font-size: 1.3888888888888888vh;
-                    color: #EAEAEA;
-                }
-
-                .img {
-                    margin-left: 0.7407407407407407vh;
-                    width: 2.1296296296296293vh;
-                    height: 1.3888888888888888vh;
-
-                    background: url(../../../../assets/images/settings/hidden.svg) no-repeat;
-                    background-size: cover;
-                    opacity: 0.2;
-
-                    transition: all 0.3s;
-                }
-            }
-
-        }
-
-        .saveButton {
-            position: relative;
-            margin-top: 0.9259259259259258vh;
-
-            width: 29.074074074074073vh;
-            height: 4.259259259259259vh;
-
-            display: flex;
-            align-items: center;
-            justify-content: center;
-
-            font-family: 'Beast Duh', sans-serif;
-
-            font-size: 2vh;
-            text-shadow: .1vh .1vh .1vh black;
-
-            color: #B4F191;
-            text-transform: uppercase;
-
-            transition: all 0.3s;
-
-
-            &:hover {
-                color: #EAEAEA;
-            }
-
-            &:hover::before {
-                opacity: 0;
-            }
-
-            &:hover::after {
-                opacity: 1;
-            }
-
-            &::before {
-                content: '';
-                position: absolute;
-
-                width: 100%;
-                height: 100%;
-
-                background: linear-gradient(270deg, rgba(255, 255, 255, 0.5) 0%, rgba(128, 128, 128, 0.2) 100%);
-
-                transition: all 0.3s;
-                z-index: -1;
-            }
-
-            &::after {
-                content: '';
-                position: absolute;
-
-                width: 100%;
-                height: 100%;
-
-                background: linear-gradient(270deg, rgba(255, 255, 255, 0.2) 0%, rgba(128, 128, 128, 0) 100%);
-
-                transition: all 0.3s;
-                z-index: -1;
-
-                opacity: 0;
-            }
+        &:hover {
+            opacity: 1;
         }
     }
 }
 
+.input {
+    margin-top: 0;
+}
+
+.saveButton {
+    margin-top: 0.5vh;
+    padding: 1vh 1.5vh;
+    font-family: $global-font;
+    font-size: 1.2vh;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: $success;
+    text-transform: uppercase;
+    background: rgba($success, 0.12);
+    border: 1px solid rgba($success, 0.4);
+    border-radius: $radius-sm;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+
+    &:hover {
+        background: rgba($success, 0.2);
+        border-color: $success;
+    }
+}
+
 .active {
-    background: url(../../../../assets/images/settings/shown.svg) no-repeat !important;
+    background: url(../../../../assets/images/settings/shown.svg) no-repeat center !important;
     background-size: contain !important;
 }

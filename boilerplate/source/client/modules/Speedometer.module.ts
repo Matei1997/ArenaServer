@@ -40,6 +40,13 @@ mp.events.add("render", () => {
 
     const speed = vehicle.getSpeed() * 3.6;
     const rpm = vehicle.rpm ?? 0;
+    const gear = vehicle.gear ?? 0;
+    const engine = vehicle.getIsEngineRunning?.() ?? true;
+    const lightsState = vehicle.getLightsState?.(0, 1);
+    const lights = lightsState?.lightsOn ?? false;
+    const locked = vehicle.getDoorLockStatus?.() === 2;
+
     speedometerBrowser.execute(`setSpeedValue(${speed});`);
     speedometerBrowser.execute(`setRPMValue(${rpm});`);
+    speedometerBrowser.execute(`setVehicleState(${gear}, ${engine}, ${lights}, ${locked});`);
 });
