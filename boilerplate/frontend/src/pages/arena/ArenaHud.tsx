@@ -12,8 +12,14 @@ const formatTime = (sec: number) => {
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 };
 
+const CARDINALS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"] as const;
+const getCardinal = (heading: number) => {
+    const idx = Math.round(((heading % 360) + 360) % 360 / 45) % 8;
+    return CARDINALS[idx];
+};
+
 const ArenaHudInner: React.FC = observer(() => {
-    const { match, killFeed, matchEnd, mapName, lastKillNotification, lastDeathNotification, scoreboardVisible, roundStart, roundEnd, zone, itemCounts, itemCast, vitals, outOfBounds } = arenaStore;
+    const { match, killFeed, matchEnd, mapName, lastKillNotification, lastDeathNotification, scoreboardVisible, roundStart, roundEnd, zone, itemCounts, itemCast, vitals, minimapData, outOfBounds } = arenaStore;
 
     if (matchEnd) {
         return (
@@ -120,6 +126,28 @@ const ArenaHudInner: React.FC = observer(() => {
                 </div>
             )}
 
+            {/* Compass bar (inspired by compass resource) */}
+            {minimapData && (
+                <div className={style.compass}>
+                    <div className={style.compassBg} />
+                    <div
+                        className={style.compassStrip}
+                        style={{
+                            transform: `translateX(calc(50% - ${(((minimapData.heading % 360) + 360) % 360 / 360) * 800}%))`
+                        }}
+                    >
+                        {CARDINALS.map((d) => (
+                            <span key={d} className={style.compassTick}>{d}</span>
+                        ))}
+                        <span className={style.compassTick}>{CARDINALS[0]}</span>
+                    </div>
+                    <div className={style.compassCenter} />
+                    <span className={style.compassHeading}>
+                        {getCardinal(minimapData.heading)} {Math.round(((minimapData.heading % 360) + 360) % 360)}°
+                    </span>
+                </div>
+            )}
+
             {/* Top center: scores + round info */}
             <div className={style.topCenter}>
                 <div className={style.scores}>
@@ -171,12 +199,20 @@ const ArenaHudInner: React.FC = observer(() => {
                             <div key={p.id} className={`${style.teammate} ${!p.alive ? style.dead : ""}`}>
                                 <span className={style.tmName}>{p.name}{isMe ? " (YOU)" : ""}</span>
                                 <span className={style.tmStatus}>{p.alive ? `${p.kills}K` : "DEAD"}</span>
-                                <div className={style.tmBarsInline}>
-                                    <div className={style.tmBarInline}>
-                                        <div className={style.tmBarArmor} style={{ width: `${ap}%` }} />
+                                <div className={style.tmBars}>
+                                    <div className={style.tmBarRow}>
+                                        <span className={style.tmBarLabel}>AP</span>
+                                        <div className={style.tmBarTrack}>
+                                            <div className={style.tmBarArmor} style={{ width: `${ap}%` }} />
+                                        </div>
+                                        <span className={style.tmBarVal}>{Math.round(ap)}</span>
                                     </div>
-                                    <div className={style.tmBarInline}>
-                                        <div className={style.tmBarHealth} style={{ width: `${hp}%` }} />
+                                    <div className={style.tmBarRow}>
+                                        <span className={style.tmBarLabel}>HP</span>
+                                        <div className={style.tmBarTrack}>
+                                            <div className={style.tmBarHealth} style={{ width: `${hp}%` }} />
+                                        </div>
+                                        <span className={style.tmBarVal}>{Math.round(hp)}</span>
                                     </div>
                                 </div>
                             </div>
@@ -185,7 +221,7 @@ const ArenaHudInner: React.FC = observer(() => {
                 </div>
             </div>
 
-            {/* Kill feed */}
+            {/* Kill feed - positioned above native radar */}
             <div className={style.bottomLeft}>
                 <div className={style.killFeed}>
                     {killFeed.map((e, i) => (

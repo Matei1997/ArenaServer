@@ -18,21 +18,25 @@ let stormAlpha = 0;
 let lastStormSoundAt = 0;
 
 const ZONE_SEGMENTS = 96;
-const ZONE_COLOR = { r: 120, g: 170, b: 255, a: 35 };
-const ZONE_GLOW_COLOR = { r: 140, g: 190, b: 255, a: 18 };
-const ZONE_WALL_HEIGHT = 34;
-const STORM_COLOR = { r: 120, g: 80, b: 220, a: 110 };
-const STORM_WALL_HEIGHT = 55;
-const STORM_RING_MAX_OFFSET = 45;
-const STORM_RING_SPEED = 1.4;
-const STORM_WARN_SECONDS = 10;
-const STORM_OVERLAY = { r: 70, g: 105, b: 185 };
+const ZONE_COLOR = { r: 100, g: 200, b: 255, a: 95 };       // Brighter safe zone boundary
+const ZONE_GLOW_COLOR = { r: 140, g: 220, b: 255, a: 65 };  // Stronger glow
+const ZONE_WALL_HEIGHT = 55;                                 // Taller visible wall
+const STORM_COLOR = { r: 200, g: 100, b: 255, a: 255 };     // Very visible storm ring
+const STORM_WALL_HEIGHT = 85;
+const STORM_RING_MAX_OFFSET = 60;
+const STORM_RING_SPEED = 1.8;
+const STORM_WARN_SECONDS = 12;
+const STORM_OVERLAY = { r: 100, g: 50, b: 150 };            // Strong purple outside-zone tint
 
 mp.events.add("client::arena:requestCollision", (x: number, y: number, z: number) => {
     mp.game.streaming.requestCollisionAtCoord(x, y, z);
 });
 
-mp.events.add("client::arena:zoneInit", (cx: number, cy: number, radius: number) => {
+mp.events.add("client::arena:zoneInit", (...args: any[]) => {
+    const arr = Array.isArray(args[0]) ? args[0] : args;
+    const cx = arr[0];
+    const cy = arr[1];
+    const radius = arr[2];
     const safeX = Number(cx);
     const safeY = Number(cy);
     const safeRadius = Number(radius);
@@ -48,23 +52,27 @@ mp.events.add("client::arena:zoneInit", (cx: number, cy: number, radius: number)
     if (zoneBlip) {
         try { (mp.game.ui as any).removeBlip(zoneBlip); } catch {}
     }
-    zoneBlip = (mp.game.ui as any).addBlipForRadius(safeX, safeY, safeRadius);
+    zoneBlip = (mp.game.ui as any).addBlipForRadius(safeX, safeY, 0, safeRadius);
     if (zoneBlip) {
         (mp.game.ui as any).setBlipColour(zoneBlip, 3);
         (mp.game.ui as any).setBlipAlpha(zoneBlip, 90);
     }
 });
 
-mp.events.add("client::arena:zoneUpdate", (
-    cx: number, cy: number, radius: number,
-    phase: number, totalPhases: number, timeLeft: number, _dps: number
-) => {
+mp.events.add("client::arena:zoneUpdate", (...args: any[]) => {
+    const arr = Array.isArray(args[0]) ? args[0] : args;
+    const cx = arr[0];
+    const cy = arr[1];
+    const radius = arr[2];
     const safeX = Number(cx);
     const safeY = Number(cy);
     const safeRadius = Number(radius);
     if (!Number.isFinite(safeX) || !Number.isFinite(safeY) || !Number.isFinite(safeRadius) || safeRadius <= 0) {
         return;
     }
+    const phase = arr[3] ?? 0;
+    const totalPhases = arr[4] ?? 1;
+    const timeLeft = arr[5] ?? 0;
     zoneActive = true;
     zoneCenterX = safeX;
     zoneCenterY = safeY;
@@ -83,7 +91,7 @@ mp.events.add("client::arena:zoneUpdate", (
     if (zoneBlip) {
         try { (mp.game.ui as any).removeBlip(zoneBlip); } catch {}
     }
-    zoneBlip = (mp.game.ui as any).addBlipForRadius(safeX, safeY, safeRadius);
+    zoneBlip = (mp.game.ui as any).addBlipForRadius(safeX, safeY, 0, safeRadius);
     if (zoneBlip) {
         (mp.game.ui as any).setBlipColour(zoneBlip, 3);
         (mp.game.ui as any).setBlipAlpha(zoneBlip, 90);
@@ -159,12 +167,21 @@ mp.events.add("render", () => {
             const sy2 = zoneCenterY + Math.sin(angle2) * stormRadius;
             const stormTopZ = groundZ + STORM_WALL_HEIGHT;
 
+            // Outer glow (thicker storm ring - more visible from distance)
+            const glowR = 3;
+            const gx1 = zoneCenterX + Math.cos(angle1) * (stormRadius + glowR);
+            const gy1 = zoneCenterY + Math.sin(angle1) * (stormRadius + glowR);
+            const gx2 = zoneCenterX + Math.cos(angle2) * (stormRadius + glowR);
+            const gy2 = zoneCenterY + Math.sin(angle2) * (stormRadius + glowR);
+            mp.game.graphics.drawLine(gx1, gy1, groundZ, gx2, gy2, groundZ,
+                STORM_COLOR.r, STORM_COLOR.g, STORM_COLOR.b, Math.floor(stormRingAlpha * 0.7));
+
             mp.game.graphics.drawLine(sx1, sy1, groundZ, sx2, sy2, groundZ,
                 STORM_COLOR.r, STORM_COLOR.g, STORM_COLOR.b, stormRingAlpha);
             mp.game.graphics.drawLine(sx1, sy1, groundZ, sx1, sy1, stormTopZ,
-                STORM_COLOR.r, STORM_COLOR.g, STORM_COLOR.b, Math.floor(stormRingAlpha * 0.35));
+                STORM_COLOR.r, STORM_COLOR.g, STORM_COLOR.b, Math.floor(stormRingAlpha * 0.85));
             mp.game.graphics.drawLine(sx1, sy1, stormTopZ, sx2, sy2, stormTopZ,
-                STORM_COLOR.r, STORM_COLOR.g, STORM_COLOR.b, Math.floor(stormRingAlpha * 0.25));
+                STORM_COLOR.r, STORM_COLOR.g, STORM_COLOR.b, Math.floor(stormRingAlpha * 0.75));
         }
     }
 
@@ -175,7 +192,7 @@ mp.events.add("render", () => {
             mp.game.audio.playSoundFrontend(-1, "Beep_Red", "DLC_HEIST_HACKING_SNAKE_SOUNDS", true);
         }
         mp.game.graphics.setTimecycleModifier("MP_Powerplay_blend");
-        mp.game.graphics.setTimecycleModifierStrength(0.6);
+        mp.game.graphics.setTimecycleModifierStrength(0.95);  // Very strong "outside zone" feel
     } else {
         stormAlpha = Math.max(0, stormAlpha - 6);
         if (stormAlpha === 0) {
