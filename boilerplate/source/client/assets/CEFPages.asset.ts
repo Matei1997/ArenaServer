@@ -27,6 +27,7 @@ const CEFPages: ICefPages = {
     arena_voting: { blur: true, radar: false, pause: false, controls: true, close: true },
     arena_hud: { blur: false, radar: true, pause: false, controls: false, close: false, cursor: false },
     loadout: { blur: true, radar: false, pause: false, controls: true, close: true },
-    clothing: { blur: false, radar: true, pause: false, controls: false, close: true }
+    clothing: { blur: false, radar: true, pause: false, controls: false, close: true },
+    admin: { blur: true, radar: false, pause: true, controls: true, close: true }
 };
 export { CEFPages };

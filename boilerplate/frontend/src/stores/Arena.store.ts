@@ -96,6 +96,7 @@ class ArenaStore {
     lastDeathNotification: { type: "death"; killer: string } | null = null;
     scoreboardVisible = false;
     vitals: { health: number; armor: number } = { health: 100, armor: 0 };
+    minimapData: { x: number; y: number; heading: number } | null = null;
     outOfBounds: { active: boolean; timeLeft: number } = { active: false, timeLeft: 0 };
     myTeam: "red" | "blue" | null = null;
     mapName = "";
@@ -176,6 +177,10 @@ class ArenaStore {
 
         EventManager.addHandler("arena", "setVitals", (data: { health: number; armor: number }) => {
             this.vitals = data;
+        });
+
+        EventManager.addHandler("arena", "setMinimapData", (data: { x: number; y: number; heading: number }) => {
+            this.minimapData = data;
         });
 
         EventManager.addHandler("arena", "outOfBounds", (data: { active: boolean; timeLeft: number }) => {

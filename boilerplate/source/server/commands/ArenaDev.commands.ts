@@ -39,6 +39,7 @@ RAGERP.commands.add({
 
 RAGERP.commands.add({
     name: "tp",
+    aliases: ["tpc"],
     description: "Teleport to x y z",
     adminlevel: ADMIN_DEV,
     run: (player: PlayerMp, _fulltext: string, x: string, y: string, z: string) => {
@@ -49,6 +50,52 @@ RAGERP.commands.add({
         if (isNaN(px) || isNaN(py) || isNaN(pz)) return player.showNotify(RageShared.Enums.NotifyType.TYPE_ERROR, "Invalid coordinates.");
         player.position = new mp.Vector3(px, py, pz);
         player.showNotify(RageShared.Enums.NotifyType.TYPE_SUCCESS, `Teleported to ${px.toFixed(1)}, ${py.toFixed(1)}, ${pz.toFixed(1)}`);
+    }
+});
+
+RAGERP.commands.add({
+    name: "anim",
+    description: "Play animation: /anim [dict] [name]",
+    adminlevel: ADMIN_DEV,
+    run: (player: PlayerMp, _fulltext: string, dict: string, name: string) => {
+        if (!dict || !name) return RAGERP.chat.sendSyntaxError(player, "/anim [dict] [name]");
+        player.playAnimation(dict, name, 1, 1);
+        player.showNotify(RageShared.Enums.NotifyType.TYPE_SUCCESS, `Animation ${dict}/${name} playing.`);
+    }
+});
+
+RAGERP.commands.add({
+    name: "anims",
+    description: "Stop current animation",
+    adminlevel: ADMIN_DEV,
+    run: (player: PlayerMp) => {
+        player.stopAnimation();
+        player.showNotify(RageShared.Enums.NotifyType.TYPE_SUCCESS, "Animation stopped.");
+    }
+});
+
+RAGERP.commands.add({
+    name: "giveweapon",
+    aliases: ["givewep"],
+    description: "Give weapon: /giveweapon [name] (e.g. weapon_pistol)",
+    adminlevel: ADMIN_DEV,
+    run: (player: PlayerMp, _fulltext: string, weaponName: string) => {
+        if (!weaponName || !weaponName.trim()) return RAGERP.chat.sendSyntaxError(player, "/giveweapon [name]");
+        const hash = mp.joaat(weaponName.trim().toLowerCase());
+        if (hash === 0) return player.showNotify(RageShared.Enums.NotifyType.TYPE_ERROR, "Invalid weapon name.");
+        player.giveWeapon(hash, 999);
+        player.showNotify(RageShared.Enums.NotifyType.TYPE_SUCCESS, `Weapon ${weaponName} given.`);
+    }
+});
+
+RAGERP.commands.add({
+    name: "d",
+    aliases: ["die", "kill"],
+    description: "Kill yourself (for testing)",
+    adminlevel: ADMIN_DEV,
+    run: (player: PlayerMp) => {
+        player.health = 0;
+        player.showNotify(RageShared.Enums.NotifyType.TYPE_INFO, "You died.");
     }
 });
 

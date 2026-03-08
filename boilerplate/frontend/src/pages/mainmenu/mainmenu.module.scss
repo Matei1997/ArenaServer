@@ -3,7 +3,7 @@
 .lobby {
     position: fixed;
     inset: 0;
-    background: rgba(2, 2, 6, 0.45);
+    background: rgba(2, 2, 8, 0.35);
     font-family: $global-font;
     overflow: hidden;
     -webkit-font-smoothing: antialiased;
@@ -13,7 +13,7 @@
         content: "";
         position: absolute;
         inset: 0;
-        background: radial-gradient(ellipse 120% 100% at 50% 0%, rgba($accent, 0.1) 0%, transparent 45%);
+        background: radial-gradient(ellipse 100% 80% at 50% 0%, rgba($accent, 0.12) 0%, transparent 50%);
         pointer-events: none;
     }
 
@@ -21,7 +21,7 @@
         content: "";
         position: absolute;
         inset: 0;
-        background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.5) 100%);
+        background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.55) 100%);
         pointer-events: none;
     }
 }
@@ -39,14 +39,14 @@
 }
 
 .menuMode {
-    background: rgba(2, 2, 6, 0.78);
+    background: rgba(2, 2, 6, 0.45);
 
     &::before {
-        background: radial-gradient(ellipse 120% 100% at 50% 0%, rgba($accent, 0.1) 0%, transparent 45%);
+        background: radial-gradient(ellipse 120% 100% at 50% 0%, rgba($accent, 0.12) 0%, transparent 45%);
     }
 
     &::after {
-        background: linear-gradient(180deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.75) 100%);
+        background: linear-gradient(180deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.75) 100%);
     }
 }
 
@@ -55,14 +55,17 @@
     top: 0;
     left: 0;
     right: 0;
-    height: 7.5vh;
+    height: 8vh;
+    min-height: 48px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 0 3.5vh;
-    background: rgba(4, 4, 5, 0.9);
-    backdrop-filter: blur(16px);
-    border-bottom: 1px solid $hud-border;
+    background: linear-gradient(180deg, rgba(12, 10, 18, 0.95) 0%, rgba(8, 6, 14, 0.9) 100%);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-bottom: 1px solid $glass-border;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04), 0 4px 24px rgba(0, 0, 0, 0.2);
     z-index: 10;
 }
 
@@ -75,20 +78,24 @@
 .logo {
     display: flex;
     flex-direction: column;
-    gap: 0.1vh;
+    gap: 0.15vh;
+    line-height: 1.2;
+    overflow: visible;
 
     .logoMain {
-        font-size: 2vh;
+        font-size: 1.8vh;
         font-weight: 700;
         color: $hud-text;
-        letter-spacing: 0.25em;
+        letter-spacing: 0.22em;
+        text-shadow: 0 0 20px rgba($accent, 0.15);
     }
 
     .logoSub {
-        font-size: 0.9vh;
+        font-size: 0.85vh;
         font-weight: 500;
         color: $accent-light;
-        letter-spacing: 0.15em;
+        letter-spacing: 0.12em;
+        opacity: 0.95;
     }
 }
 
@@ -99,25 +106,26 @@
 
 .navLink {
     padding: 1vh 1.8vh;
-    font-size: 1.15vh;
-    font-weight: 500;
-    letter-spacing: 0.08em;
+    font-size: 1.1vh;
+    font-weight: 600;
+    letter-spacing: 0.1em;
     color: $hud-text-muted;
     background: transparent;
     border: none;
-    border-radius: 0.6vh;
+    border-radius: $radius-sm;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
     font-family: inherit;
 
     &:hover {
-        color: rgba(255, 255, 255, 0.9);
+        color: rgba(255, 255, 255, 0.95);
     }
 
     &.active {
-        color: $hud-text;
-        background: $accent-dim;
+        color: #fff;
+        background: linear-gradient(135deg, rgba($accent, 0.25) 0%, rgba($accent-deep, 0.2) 100%);
         border-bottom: 2px solid $accent;
+        box-shadow: 0 2px 12px rgba($accent, 0.15);
     }
 }
 
@@ -131,20 +139,20 @@
     display: flex;
     align-items: center;
     gap: 1.5vh;
-    padding: 1vh 1.8vh;
+    padding: 0.9vh 1.6vh;
     background: rgba(255, 255, 255, 0.04);
-    border-radius: 1vh;
+    border-radius: $radius-md;
     border: 1px solid $hud-border;
 
     .gems {
-        font-size: 1.1vh;
+        font-size: 1.05vh;
         font-weight: 600;
         color: $success;
         letter-spacing: 0.02em;
     }
 
     .playerName {
-        font-size: 1.2vh;
+        font-size: 1.15vh;
         font-weight: 600;
         color: $hud-text;
     }
@@ -153,121 +161,110 @@
 .mainContent {
     position: absolute;
     inset: 0;
-    padding: 10vh 4vh 4vh;
-    display: grid;
-    grid-template-columns: 26vh 1fr 32vh;
-    grid-template-rows: 1fr;
-    gap: 3vh;
+    padding: 9vh 4vh 4vh;
+    display: flex;
+    flex-direction: column;
     z-index: 1;
 }
 
-/* Left mode column */
-.modeColumn {
-    grid-column: 1;
+/* Mode tabs at top */
+.modeTabs {
     display: flex;
-    flex-direction: column;
-    gap: 1.6vh;
+    gap: 0.5vh;
+    margin-bottom: 2vh;
 }
 
-.modeList {
+.modeTab {
+    padding: 1vh 2vh;
+    font-size: 1.15vh;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: $hud-text-muted;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+
+    &:hover {
+        color: $hud-text;
+    }
+
+    &.modeTabActive {
+        color: $accent-light;
+        border-bottom-color: $accent;
+        text-shadow: 0 0 20px rgba($accent, 0.3);
+    }
+}
+
+/* Compact queue card bottom-left */
+.queueCard {
+    position: absolute;
+    bottom: 4vh;
+    left: 4vh;
     display: flex;
     flex-direction: column;
+    gap: 1.2vh;
+    padding: 1.8vh 2.2vh;
+    background: $glass-bg;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid $glass-border;
+    border-radius: $radius-md;
+    box-shadow: $card-shadow;
+    width: 22vh;
+}
+
+.queueMode {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: 1vh;
 }
 
-.modeCard {
-    display: flex;
-    flex-direction: column;
-    gap: 0.8vh;
-    padding: 1.2vh;
-    background: rgba(10, 10, 14, 0.7);
-    border: 1px solid $hud-border;
-    border-radius: 1.2vh;
-    text-align: left;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    color: $hud-text;
-
-    &:hover {
-        border-color: rgba(255, 255, 255, 0.18);
-        transform: translateY(-1px);
-    }
-
-    &.modeCardActive {
-        border-color: rgba($accent, 0.6);
-        box-shadow: 0 0 2vh rgba($accent, 0.2);
-    }
-}
-
-.modeThumb {
-    height: 7.2vh;
-    border-radius: 0.8vh;
-    background:
-        linear-gradient(180deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.7) 100%),
-        radial-gradient(circle at 20% 20%, rgba($accent, 0.35), transparent 55%),
-        rgba(25, 25, 35, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.modeMeta {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2vh;
-}
-
-.modeName {
-    font-size: 1.3vh;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-}
-
-.modeHint {
-    font-size: 0.95vh;
-    letter-spacing: 0.18em;
-    color: $hud-text-muted;
-}
-
-.sizeList {
-    display: flex;
-    flex-direction: column;
-    gap: 0.8vh;
-    padding-top: 0.6vh;
-}
-
-.sizeCard {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2vh;
-    padding: 1vh 1.4vh;
-    background: rgba(10, 10, 14, 0.7);
-    border: 1px solid $hud-border;
-    border-radius: 1vh;
-    text-align: left;
-    cursor: pointer;
-    transition: all 0.2s ease;
-
-    &:hover {
-        border-color: rgba(255, 255, 255, 0.18);
-    }
-
-    &.sizeCardActive {
-        border-color: rgba($accent, 0.6);
-        background: rgba($accent, 0.12);
-        box-shadow: 0 0 1.8vh rgba($accent, 0.2);
-    }
-}
-
-.sizeLabel {
-    font-size: 1.25vh;
+.queueModeLabel {
+    font-size: 1.4vh;
     font-weight: 700;
     letter-spacing: 0.12em;
     color: $hud-text;
 }
 
-.sizeSub {
-    font-size: 0.9vh;
-    letter-spacing: 0.2em;
+.queueModeArrows {
+    font-size: 1.2vh;
     color: $hud-text-muted;
+    opacity: 0.7;
+}
+
+.sizeRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5vh;
+}
+
+.sizeChip {
+    padding: 0.5vh 1vh;
+    font-size: 1vh;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: $hud-text-muted;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid $glass-border;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+
+    &:hover {
+        color: $hud-text;
+        border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    &.sizeChipActive {
+        color: #fff;
+        background: linear-gradient(135deg, rgba($accent, 0.35) 0%, rgba($accent-deep, 0.25) 100%);
+        border-color: $accent;
+    }
 }
 
 /* Map selection grid */
@@ -346,74 +343,25 @@
     z-index: 1;
 }
 
-/* Create match panel */
-.createPanel {
-    grid-column: 3;
-    grid-row: 1 / -1;
-    display: flex;
-    flex-direction: column;
-    padding: 2.5vh;
-    background: rgba(10, 10, 14, 0.92);
-    backdrop-filter: blur(20px);
-    border: 1px solid $hud-border;
-    border-radius: 1.4vh;
-}
-
-.createTitle {
-    font-size: 1.6vh;
-    font-weight: 700;
-    color: $hud-text;
-    letter-spacing: 0.05em;
-    margin: 0 0 0.8vh;
-}
-
-.createDesc {
-    font-size: 1.1vh;
-    color: $hud-text-muted;
-    margin: 0 0 2vh;
-    line-height: 1.4;
-}
-
-.createSettings {
-    display: flex;
-    flex-direction: column;
-    gap: 1vh;
-    margin-bottom: 2vh;
-}
-
-.settingRow {
-    display: flex;
-    justify-content: space-between;
-    font-size: 1.2vh;
-
-    .settingLabel {
-        color: $hud-text-muted;
-    }
-
-    .settingValue {
-        color: $hud-text;
-        font-weight: 600;
-    }
-}
-
-.createBtn {
+.queueBtn {
     width: 100%;
-    padding: 1.7vh 2vh;
-    font-size: 1.4vh;
+    padding: 1.1vh 1.5vh;
+    font-size: 1.15vh;
     font-weight: 700;
     font-family: inherit;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.12em;
     color: #fff;
-    background: linear-gradient(180deg, rgba($accent, 0.9) 0%, rgba($accent-deep, 0.9) 100%);
-    border: 1px solid rgba($accent, 0.4);
-    border-radius: 1vh;
+    background: linear-gradient(135deg, $accent 0%, $accent-deep 100%);
+    border: 1px solid rgba($accent-light, 0.35);
+    border-radius: $radius-sm;
     cursor: pointer;
-    transition: all 0.25s ease;
-    margin-bottom: 1vh;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba($accent, 0.25);
 
     &:hover:not(:disabled) {
-        background: linear-gradient(180deg, $accent 0%, $accent-deep 100%);
-        box-shadow: 0 0 3vh $accent-glow;
+        background: linear-gradient(135deg, $accent-light 0%, $accent 100%);
+        box-shadow: 0 4px 16px $accent-glow;
+        transform: translateY(-1px);
     }
 
     &:disabled {
@@ -422,16 +370,156 @@
     }
 }
 
+/* Social panel right */
+.socialPanel {
+    position: absolute;
+    top: 9vh;
+    right: 4vh;
+    bottom: 4vh;
+    width: 28vh;
+    display: flex;
+    flex-direction: column;
+    gap: 2vh;
+    padding: 2vh;
+    background: $glass-bg;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid $glass-border;
+    border-radius: $radius-md;
+    box-shadow: $card-shadow;
+}
+
+.socialSection {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8vh;
+}
+
+.socialTitle {
+    font-size: 0.9vh;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: $accent-light;
+    margin-bottom: 0.4vh;
+    opacity: 0.9;
+}
+
+.socialName {
+    font-size: 1.5vh;
+    font-weight: 700;
+    color: $hud-text;
+    letter-spacing: 0.02em;
+}
+
+.socialRank {
+    font-size: 1.05vh;
+    font-weight: 600;
+    color: $accent-light;
+    letter-spacing: 0.1em;
+    padding: 0.25vh 0.6vh;
+    background: rgba($accent, 0.2);
+    border-radius: $radius-sm;
+    width: fit-content;
+    margin-top: 0.3vh;
+}
+
+.socialBadges {
+    font-size: 0.95vh;
+    color: $hud-text-muted;
+    letter-spacing: 0.15em;
+    margin-top: 0.6vh;
+}
+
+.socialLevel {
+    font-size: 1.1vh;
+    font-weight: 600;
+    color: $hud-text;
+}
+
+.socialXp {
+    font-size: 0.95vh;
+    color: $hud-text-muted;
+}
+
+.socialSearch {
+    display: flex;
+    align-items: center;
+    gap: 0.8vh;
+    padding: 0.8vh 1vh;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $hud-border;
+    border-radius: 0.6vh;
+}
+
+.searchIcon {
+    font-size: 1.2vh;
+    color: $accent-light;
+}
+
+.searchInput {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 1.1vh;
+    color: $hud-text;
+    font-family: inherit;
+
+    &::placeholder {
+        color: $hud-text-muted;
+    }
+}
+
+.inviteSlots {
+    display: flex;
+    gap: 0.8vh;
+    margin-top: 0.6vh;
+}
+
+.inviteSlot {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3vh;
+    padding: 1.2vh 0.6vh;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px dashed $hud-border;
+    border-radius: 0.6vh;
+    min-height: 8vh;
+}
+
+.invitePlus {
+    font-size: 1.8vh;
+    color: $accent-light;
+    font-weight: 300;
+}
+
+.inviteLabel {
+    font-size: 0.75vh;
+    letter-spacing: 0.15em;
+    color: $hud-text-muted;
+}
+
+.friendsList {
+    font-size: 0.95vh;
+    color: $hud-text-muted;
+    letter-spacing: 0.15em;
+    margin-top: 1vh;
+}
+
 .leaveBtn {
     padding: 0.8vh 1.5vh;
-    font-size: 1.1vh;
+    font-size: 1.05vh;
     font-weight: 500;
     font-family: inherit;
+    letter-spacing: 0.06em;
     color: $hud-text-muted;
     background: transparent;
     border: none;
     cursor: pointer;
-    transition: color 0.2s;
+    transition: all 0.2s;
 
     &:hover {
         color: $hud-text;
@@ -440,15 +528,15 @@
 
 .freeroamBtn {
     width: 100%;
-    padding: 1.2vh 2vh;
-    font-size: 1.25vh;
+    padding: 0.8vh 1.5vh;
+    font-size: 1vh;
     font-weight: 600;
     font-family: inherit;
     letter-spacing: 0.08em;
     color: $hud-text-muted;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid $hud-border;
-    border-radius: 0.8vh;
+    border-radius: $radius-sm;
     cursor: pointer;
     transition: all 0.2s;
 
@@ -473,7 +561,8 @@
     align-items: center;
     justify-content: center;
     gap: 2vh;
-    padding-top: 4vh;
+    padding-top: 9vh;
+    min-height: calc(100vh - 9vh);
 }
 
 .infoTitle {

@@ -37,24 +37,26 @@ const SettingsMenu: FC<{ store: typeof playerStore }> = observer(({ store }) => 
                     <div className={style.img}></div>
                 </div>
             ) : null}
-            <div className={style.button}>
-                <div className={style.text}>Settings</div>
-            </div>
-            <div className={style.nav}>
-                {categoryNav.map((e, i) => {
-                    return (
-                        <div key={i} className={cn(style.box, category === e.link && style.active)} onClick={() => setCategorry(e.link)}>
-                            <img src={e.icon} alt="" />
-                            <span>{e.text}</span>
-                        </div>
-                    );
-                })}
-            </div>
-            <div className={style.content}>
-                <div className={style.info}>
-                    {category === "main" && <Main store={store} />}
-                    {category === "keys" && <Keys store={store} />}
-                    {category === "display" && <Display store={store} />}
+            <div className={style.wrapper}>
+                <div className={style.button}>
+                    <div className={style.text}>Settings</div>
+                </div>
+                <div className={style.nav}>
+                    {categoryNav.map((e, i) => {
+                        return (
+                            <div key={i} className={cn(style.box, category === e.link && style.active)} onClick={() => setCategorry(e.link)}>
+                                <img src={e.icon} alt="" />
+                                <span>{e.text}</span>
+                            </div>
+                        );
+                    })}
+                </div>
+                <div className={style.content}>
+                    <div className={style.info}>
+                        {category === "main" && <Main store={store} />}
+                        {category === "keys" && <Keys store={store} />}
+                        {category === "display" && <Display store={store} />}
+                    </div>
                 </div>
             </div>
         </div>

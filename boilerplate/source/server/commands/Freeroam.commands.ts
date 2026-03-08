@@ -80,8 +80,8 @@ RAGERP.commands.add({
 
 RAGERP.commands.add({
     name: "fgun",
-    aliases: ["fweapon", "weapon", "gun", "wep"],
-    description: "Give yourself a weapon (e.g. /fgun pistol, /weapon assaultrifle)",
+    aliases: ["fweapon", "gun", "wep"],
+    description: "Give yourself a weapon (e.g. /fgun pistol, /gun assaultrifle)",
     run: (player: PlayerMp, _fulltext: string, weaponName: string) => {
         if (!player.getVariable("loggedin")) return player.showNotify(RageShared.Enums.NotifyType.TYPE_ERROR, "You must be logged in.");
         if (!weaponName || !weaponName.trim()) return RAGERP.chat.sendSyntaxError(player, "/fgun <weapon>");

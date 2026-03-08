@@ -46,7 +46,7 @@ export const ZONE_PHASES: ZonePhase[] = [
 ];
 
 export const ITEM_CONFIG = {
-    medkit: { castTime: 3000, heal: 60, maxHp: 100, countPerRound: 3 },
+    medkit: { castTime: 3000, heal: 100, maxHp: 100, countPerRound: 3 },
     plate:  { castTime: 2000, armor: 25, maxArmor: 100, countPerRound: 5 },
 };
 

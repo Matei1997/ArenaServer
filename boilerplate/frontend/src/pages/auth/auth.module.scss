@@ -15,12 +15,13 @@
         content: "";
         width: 100%;
         height: 100%;
-        background: radial-gradient(ellipse at 30% 50%, rgba(48, 25, 52, 0.3) 0%, transparent 60%),
-                    radial-gradient(ellipse at 70% 80%, rgba(89, 27, 135, 0.15) 0%, transparent 50%);
+        background: radial-gradient(ellipse at 30% 50%, rgba(48, 25, 52, 0.35) 0%, transparent 60%),
+                    radial-gradient(ellipse at 70% 80%, rgba(89, 27, 135, 0.2) 0%, transparent 50%),
+                    linear-gradient(180deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.75) 100%);
         z-index: 0;
     }
 
-    .authform {
+        .authform {
         position: relative;
         z-index: 1;
         width: 44vh;
@@ -29,11 +30,12 @@
         align-items: center;
         justify-content: center;
         padding: 5vh 4vh;
-        background: rgba(10, 10, 14, 0.9);
-        border: 1px solid rgba(255, 255, 255, 0.06);
-        border-radius: 1.2vh;
+        background: $glass-bg;
+        border: 1px solid $glass-border;
+        border-radius: 0.8vh;
         backdrop-filter: blur(20px);
-        box-shadow: 0 0 8vh rgba(48, 25, 52, 0.2);
+        -webkit-backdrop-filter: blur(20px);
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), 0 0 40px rgba($accent, 0.08);
         animation: fadeIn 0.4s ease-out;
 
         @keyframes fadeIn {
@@ -165,34 +167,41 @@
     top: 0;
     left: 0;
     right: 0;
-    height: 7.5vh;
+    height: 8vh;
+    min-height: 48px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 0 3.5vh;
-    background: rgba(4, 4, 5, 0.85);
-    backdrop-filter: blur(16px);
+    background: rgba(6, 6, 10, 0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     border-bottom: 1px solid $hud-border;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03);
     z-index: 2;
 }
 
 .logo {
     display: flex;
     flex-direction: column;
-    gap: 0.1vh;
+    gap: 0.15vh;
+    line-height: 1.2;
+    overflow: visible;
 
     .logoMain {
-        font-size: 2vh;
+        font-size: 1.8vh;
         font-weight: 700;
         color: $hud-text;
-        letter-spacing: 0.25em;
+        letter-spacing: 0.22em;
+        text-shadow: 0 0 20px rgba($accent, 0.15);
     }
 
     .logoSub {
-        font-size: 0.9vh;
+        font-size: 0.85vh;
         font-weight: 500;
         color: $accent-light;
-        letter-spacing: 0.15em;
+        letter-spacing: 0.12em;
+        opacity: 0.95;
     }
 }
 
@@ -259,10 +268,12 @@
 .profileCard {
     width: 100%;
     padding: 2vh;
-    background: rgba(10, 10, 14, 0.92);
+    background: $glass-bg;
     backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border: 1px solid $hud-border;
-    border-radius: 1.4vh;
+    border-radius: 0.8vh;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
     display: flex;
     flex-direction: column;
     gap: 1vh;
@@ -281,10 +292,15 @@
 }
 
 .profileRank {
-    font-size: 1.1vh;
+    font-size: 1.05vh;
+    font-weight: 600;
     color: $accent-light;
     text-transform: uppercase;
     letter-spacing: 0.12em;
+    padding: 0.25vh 0.6vh;
+    background: rgba($accent, 0.2);
+    border-radius: 0.5vh;
+    width: fit-content;
 }
 
 .profileStats {

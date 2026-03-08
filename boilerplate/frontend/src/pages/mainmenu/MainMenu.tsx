@@ -2,25 +2,19 @@ import * as React from "react";
 import { observer } from "mobx-react-lite";
 import EventManager from "utils/EventManager.util";
 import { createComponent } from "src/hoc/registerComponent";
+import { arenaStore } from "store/Arena.store";
 import { playerStore } from "store/Player.store";
-import { IconSkull, IconUsers, IconGun, IconUser } from "src/components/ui/Icons";
 import style from "./mainmenu.module.scss";
 import LoadoutPanel from "../loadout/LoadoutPanel";
 import ClothingPanel from "../clothing/ClothingPanel";
 
 const GAME_MODES = [
-    { id: "hopouts", label: "HOP OUTS", Icon: IconSkull },
-    { id: "ffa", label: "FREE FOR ALL", Icon: IconUsers },
-    { id: "gungame", label: "GUN GAME", Icon: IconGun }
+    { id: "hopouts", label: "HOP OUTS" },
+    { id: "ffa", label: "FREE FOR ALL" },
+    { id: "gungame", label: "GUN GAME" }
 ] as const;
 
 const HOP_OUT_SIZES = [2, 3, 4, 5] as const;
-
-const FALLBACK_MAPS = [
-    { id: "camp", name: "CAMP", players: "0 / 30", status: "OPEN" },
-    { id: "island", name: "ISLAND", players: "0 / 30", status: "OPEN" },
-    { id: "sawmill", name: "SAWMILL", players: "0 / 30", status: "OPEN" }
-];
 
 const MainMenu: React.FC = observer(() => {
     const [loading, setLoading] = React.useState<string | null>(null);
@@ -28,8 +22,6 @@ const MainMenu: React.FC = observer(() => {
     const [activeNav, setActiveNav] = React.useState<"play" | "connect" | "ranking" | "loadout" | "clothing">("play");
     const [gameMode, setGameMode] = React.useState<(typeof GAME_MODES)[number]["id"]>("hopouts");
     const [queueSize, setQueueSize] = React.useState<(typeof HOP_OUT_SIZES)[number]>(2);
-    const [arenaMaps, setArenaMaps] = React.useState<{ id: string; name: string }[]>([]);
-    const [selectedMap, setSelectedMap] = React.useState<string>("");
     const [playerName, setPlayerName] = React.useState<string>("Player");
 
     React.useEffect(() => {
@@ -41,25 +33,17 @@ const MainMenu: React.FC = observer(() => {
         EventManager.addHandler("mainmenu", "setPlayerData", (data: { name: string }) => {
             setPlayerName(data.name || "Player");
         });
-        EventManager.addHandler("mainmenu", "setArenaMaps", (data: { maps: { id: string; name: string }[] }) => {
-            const maps = data?.maps ?? [];
-            setArenaMaps(maps);
-            if (maps.length > 0) {
-                setSelectedMap((prev) => prev || maps[0].id);
-            }
-        });
-        EventManager.emitServer("mainmenu", "getArenaMaps");
         return () => EventManager.removeTargetHandlers("mainmenu");
     }, []);
 
     const handleQueue = React.useCallback(() => {
         setError(null);
         setLoading("arena");
-        const payload: { mode: string; map?: string; size?: number } = { mode: gameMode, map: selectedMap };
+        const payload: { mode: string; size?: number } = { mode: gameMode };
         if (gameMode === "hopouts") payload.size = queueSize;
         EventManager.emitServer("mainmenu", "playArena", JSON.stringify(payload));
         setTimeout(() => setLoading(null), 3000);
-    }, [gameMode, selectedMap, queueSize]);
+    }, [gameMode, queueSize]);
 
     const handleFreeroam = React.useCallback(() => {
         setError(null);
@@ -73,11 +57,8 @@ const MainMenu: React.FC = observer(() => {
     }, []);
 
     const isLoading = loading !== null;
-    const mapOptions = arenaMaps.length
-        ? arenaMaps.map((m) => ({ id: m.id, name: m.name, players: "0 / 30", status: "OPEN" }))
-        : FALLBACK_MAPS;
     const displayName = playerName && playerName !== "Player" ? playerName : (playerStore.data.id ? `Player [${playerStore.data.id}]` : "Player");
-    const playersLabel = gameMode === "hopouts" ? String(queueSize * 2) : "FREE";
+    const modeLabel = GAME_MODES.find((m) => m.id === gameMode)?.label ?? "HOP OUTS";
 
     React.useEffect(() => {
         EventManager.emitClient("mainmenu", "scene", { showPlayer: activeNav === "clothing" });
@@ -120,96 +101,87 @@ const MainMenu: React.FC = observer(() => {
                         <span className={style.gems}>0 GEMS</span>
                         <span className={style.playerName}>{displayName}</span>
                     </div>
-                    <button className={style.leaveBtn}>LEAVE THE ARENA →</button>
+                    {arenaStore.match && (
+                        <button
+                            className={style.leaveBtn}
+                            onClick={() => EventManager.emitServer("arena", "leaveMatch")}
+                        >
+                            LEAVE THE ARENA →
+                        </button>
+                    )}
                 </div>
             </header>
 
             {activeNav === "play" && (
                 <main className={style.mainContent}>
-                    <aside className={style.modeColumn}>
-                        <div className={style.modeList}>
-                            {GAME_MODES.map((mode) => (
-                                <button
-                                    key={mode.id}
-                                    className={cn(style.modeCard, gameMode === mode.id && style.modeCardActive)}
-                                    onClick={() => setGameMode(mode.id)}
-                                >
-                                    <div className={style.modeThumb} />
-                                    <div className={style.modeMeta}>
-                                        <span className={style.modeName}>{mode.label}</span>
-                                        <span className={style.modeHint}>PVP PLAYLIST</span>
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
-
-                        {gameMode === "hopouts" && (
-                            <div className={style.sizeList}>
-                                {HOP_OUT_SIZES.map((size) => (
-                                    <button
-                                        key={size}
-                                        className={cn(style.sizeCard, queueSize === size && style.sizeCardActive)}
-                                        onClick={() => setQueueSize(size)}
-                                    >
-                                        <div className={style.sizeLabel}>{size}V{size}</div>
-                                        <div className={style.sizeSub}>HOP OUTS</div>
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </aside>
-
-                    <div className={style.mapGrid}>
-                        {mapOptions.map((map) => (
+                    <div className={style.modeTabs}>
+                        {GAME_MODES.map((mode) => (
                             <button
-                                key={map.id}
-                                className={cn(style.mapCard, selectedMap === map.id && style.mapCardActive)}
-                                onClick={() => setSelectedMap(map.id)}
+                                key={mode.id}
+                                className={cn(style.modeTab, gameMode === mode.id && style.modeTabActive)}
+                                onClick={() => setGameMode(mode.id)}
                             >
-                                <div className={style.mapPlayers}>
-                                    <IconUser size="1em" /> {map.players}
-                                </div>
-                                <div className={style.mapStatus}>{map.status}</div>
-                                <div className={style.mapName}>{map.name}</div>
+                                {mode.label}
                             </button>
                         ))}
                     </div>
 
-                    <aside className={style.createPanel}>
-                        <h2 className={style.createTitle}>CREATE A MATCH</h2>
-                        <p className={style.createDesc}>CREATE A PRIVATE ROOM TO COMPETE WITH YOUR FRIENDS OR JUST TO PRACTICE</p>
-                        <div className={style.createSettings}>
-                            <div className={style.settingRow}>
-                                <span className={style.settingLabel}>MAP:</span>
-                                <span className={style.settingValue}>{mapOptions.find((m) => m.id === selectedMap)?.name ?? "SAWMILL"}</span>
-                            </div>
-                            <div className={style.settingRow}>
-                                <span className={style.settingLabel}>PLAYERS:</span>
-                                <span className={style.settingValue}>{playersLabel}</span>
-                            </div>
-                            <div className={style.settingRow}>
-                                <span className={style.settingLabel}>RATE:</span>
-                                <span className={style.settingValue}>500</span>
-                            </div>
-                            <div className={style.settingRow}>
-                                <span className={style.settingLabel}>WEAPON:</span>
-                                <span className={style.settingValue}>RANDOM</span>
-                            </div>
-                            <div className={style.settingRow}>
-                                <span className={style.settingLabel}>MODE:</span>
-                                <span className={style.settingValue}>{GAME_MODES.find((m) => m.id === gameMode)?.label ?? "HOP OUTS"}</span>
-                            </div>
-                            <div className={style.settingRow}>
-                                <span className={style.settingLabel}>ROUNDS:</span>
-                                <span className={style.settingValue}>3</span>
-                            </div>
+                    <section className={style.queueCard}>
+                        <div className={style.queueMode}>
+                            <span className={style.queueModeLabel}>{modeLabel}</span>
+                            <span className={style.queueModeArrows}>‹ ›</span>
                         </div>
-                        <button className={style.createBtn} onClick={handleQueue} disabled={isLoading}>
-                            {loading === "arena" ? "JOINING..." : "CREATE A MATCH"}
+                        {gameMode === "hopouts" && (
+                            <div className={style.sizeRow}>
+                                {HOP_OUT_SIZES.map((size) => (
+                                    <button
+                                        key={size}
+                                        className={cn(style.sizeChip, queueSize === size && style.sizeChipActive)}
+                                        onClick={() => setQueueSize(size)}
+                                    >
+                                        {size}v{size}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                        <button className={style.queueBtn} onClick={handleQueue} disabled={isLoading}>
+                            {loading === "arena" ? "JOINING..." : "QUEUE"}
                         </button>
-                        <button className={style.freeroamBtn} onClick={handleFreeroam} disabled={isLoading}>
-                            {loading === "freeroam" ? "..." : "FREEROAM"}
+                        <button
+                            className={style.freeroamBtn}
+                            onClick={handleFreeroam}
+                            disabled={isLoading}
+                            title="Enter freeroam. Use /fdim to set your dimension."
+                        >
+                            {loading === "freeroam" ? "ENTERING..." : "FREEROAM"}
                         </button>
+                    </section>
+
+                    <aside className={style.socialPanel}>
+                        <div className={style.socialSection}>
+                            <div className={style.socialTitle}>YOUR PROFILE</div>
+                            <div className={style.socialName}>{displayName}</div>
+                            <div className={style.socialRank}>BRONZE I</div>
+                            <div className={style.socialBadges}>BADGES</div>
+                            <div className={style.socialLevel}>LEVEL 1</div>
+                            <div className={style.socialXp}>0 / 500 XP</div>
+                        </div>
+                        <div className={style.socialSection}>
+                            <div className={style.socialTitle}>YOUR LOBBY</div>
+                            <div className={style.socialSearch}>
+                                <span className={style.searchIcon}>⌕</span>
+                                <input type="text" placeholder="Search..." className={style.searchInput} readOnly />
+                            </div>
+                            <div className={style.inviteSlots}>
+                                {[1, 2, 3].map((i) => (
+                                    <div key={i} className={style.inviteSlot}>
+                                        <span className={style.invitePlus}>+</span>
+                                        <span className={style.inviteLabel}>INVITE FRIEND</span>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className={style.friendsList}>FRIENDS LIST</div>
+                        </div>
                     </aside>
                 </main>
             )}

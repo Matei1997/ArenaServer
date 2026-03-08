@@ -1,6 +1,6 @@
 /**
  * Client-side arena zone rendering.
- * Draws a shrinking circle in the game world and on the minimap.
+ * Storm = boundary at zone edge. When outside: gradient purple tint only (no 3D lines).
  */
 
 let zoneActive = false;
@@ -18,21 +18,20 @@ let stormAlpha = 0;
 let lastStormSoundAt = 0;
 
 const ZONE_SEGMENTS = 96;
-const ZONE_COLOR = { r: 120, g: 170, b: 255, a: 35 };
-const ZONE_GLOW_COLOR = { r: 140, g: 190, b: 255, a: 18 };
-const ZONE_WALL_HEIGHT = 34;
-const STORM_COLOR = { r: 120, g: 80, b: 220, a: 110 };
-const STORM_WALL_HEIGHT = 55;
-const STORM_RING_MAX_OFFSET = 45;
-const STORM_RING_SPEED = 1.4;
-const STORM_WARN_SECONDS = 10;
-const STORM_OVERLAY = { r: 70, g: 105, b: 185 };
+const ZONE_COLOR = { r: 100, g: 200, b: 255, a: 95 };
+const ZONE_GLOW_COLOR = { r: 140, g: 220, b: 255, a: 65 };
+const ZONE_WALL_HEIGHT = 55;
+const STORM_WARN_SECONDS = 12;
 
 mp.events.add("client::arena:requestCollision", (x: number, y: number, z: number) => {
     mp.game.streaming.requestCollisionAtCoord(x, y, z);
 });
 
-mp.events.add("client::arena:zoneInit", (cx: number, cy: number, radius: number) => {
+mp.events.add("client::arena:zoneInit", (...args: any[]) => {
+    const arr = Array.isArray(args[0]) ? args[0] : args;
+    const cx = arr[0];
+    const cy = arr[1];
+    const radius = arr[2];
     const safeX = Number(cx);
     const safeY = Number(cy);
     const safeRadius = Number(radius);
@@ -48,23 +47,27 @@ mp.events.add("client::arena:zoneInit", (cx: number, cy: number, radius: number)
     if (zoneBlip) {
         try { (mp.game.ui as any).removeBlip(zoneBlip); } catch {}
     }
-    zoneBlip = (mp.game.ui as any).addBlipForRadius(safeX, safeY, safeRadius);
+    zoneBlip = (mp.game.ui as any).addBlipForRadius(safeX, safeY, 0, safeRadius);
     if (zoneBlip) {
         (mp.game.ui as any).setBlipColour(zoneBlip, 3);
         (mp.game.ui as any).setBlipAlpha(zoneBlip, 90);
     }
 });
 
-mp.events.add("client::arena:zoneUpdate", (
-    cx: number, cy: number, radius: number,
-    phase: number, totalPhases: number, timeLeft: number, _dps: number
-) => {
+mp.events.add("client::arena:zoneUpdate", (...args: any[]) => {
+    const arr = Array.isArray(args[0]) ? args[0] : args;
+    const cx = arr[0];
+    const cy = arr[1];
+    const radius = arr[2];
     const safeX = Number(cx);
     const safeY = Number(cy);
     const safeRadius = Number(radius);
     if (!Number.isFinite(safeX) || !Number.isFinite(safeY) || !Number.isFinite(safeRadius) || safeRadius <= 0) {
         return;
     }
+    const phase = arr[3] ?? 0;
+    const totalPhases = arr[4] ?? 1;
+    const timeLeft = arr[5] ?? 0;
     zoneActive = true;
     zoneCenterX = safeX;
     zoneCenterY = safeY;
@@ -83,7 +86,7 @@ mp.events.add("client::arena:zoneUpdate", (
     if (zoneBlip) {
         try { (mp.game.ui as any).removeBlip(zoneBlip); } catch {}
     }
-    zoneBlip = (mp.game.ui as any).addBlipForRadius(safeX, safeY, safeRadius);
+    zoneBlip = (mp.game.ui as any).addBlipForRadius(safeX, safeY, 0, safeRadius);
     if (zoneBlip) {
         (mp.game.ui as any).setBlipColour(zoneBlip, 3);
         (mp.game.ui as any).setBlipAlpha(zoneBlip, 90);
@@ -120,12 +123,8 @@ mp.events.add("render", () => {
 
     const pulse = (Math.sin(Date.now() / 450) + 1) * 0.5;
     const glowAlpha = Math.floor(ZONE_GLOW_COLOR.a + pulse * 20);
-    const phaseElapsed = zonePhaseUpdatedAt ? Math.floor((Date.now() - zonePhaseUpdatedAt) / 1000) : 0;
-    const phaseTimeLeft = Math.max(0, zonePhaseTimeLeft - phaseElapsed);
-    const stormOffset = Math.min(STORM_RING_MAX_OFFSET, phaseTimeLeft * STORM_RING_SPEED);
-    const stormRadius = zoneRadius + stormOffset;
-    const stormRingAlpha = Math.floor(STORM_COLOR.a + pulse * 50);
 
+    // Safe zone boundary (blue) - this IS the storm boundary; cross it = you're in the storm
     for (let i = 0; i < ZONE_SEGMENTS; i++) {
         const angle1 = (i / ZONE_SEGMENTS) * Math.PI * 2;
         const angle2 = ((i + 1) / ZONE_SEGMENTS) * Math.PI * 2;
@@ -151,40 +150,27 @@ mp.events.add("render", () => {
 
         mp.game.graphics.drawLine(xg1, yg1, groundZ, xg2, yg2, groundZ,
             ZONE_GLOW_COLOR.r, ZONE_GLOW_COLOR.g, ZONE_GLOW_COLOR.b, glowAlpha);
-
-        if (stormOffset > 0.1) {
-            const sx1 = zoneCenterX + Math.cos(angle1) * stormRadius;
-            const sy1 = zoneCenterY + Math.sin(angle1) * stormRadius;
-            const sx2 = zoneCenterX + Math.cos(angle2) * stormRadius;
-            const sy2 = zoneCenterY + Math.sin(angle2) * stormRadius;
-            const stormTopZ = groundZ + STORM_WALL_HEIGHT;
-
-            mp.game.graphics.drawLine(sx1, sy1, groundZ, sx2, sy2, groundZ,
-                STORM_COLOR.r, STORM_COLOR.g, STORM_COLOR.b, stormRingAlpha);
-            mp.game.graphics.drawLine(sx1, sy1, groundZ, sx1, sy1, stormTopZ,
-                STORM_COLOR.r, STORM_COLOR.g, STORM_COLOR.b, Math.floor(stormRingAlpha * 0.35));
-            mp.game.graphics.drawLine(sx1, sy1, stormTopZ, sx2, sy2, stormTopZ,
-                STORM_COLOR.r, STORM_COLOR.g, STORM_COLOR.b, Math.floor(stormRingAlpha * 0.25));
-        }
     }
 
+    // When OUTSIDE zone = you're IN the storm. Apply gradient purple tint (no 3D lines).
     if (isOutside) {
-        stormAlpha = Math.min(140, stormAlpha + 4);
+        stormAlpha = Math.min(120, stormAlpha + 4);
         if (Date.now() - lastStormSoundAt > 2500) {
             lastStormSoundAt = Date.now();
             mp.game.audio.playSoundFrontend(-1, "Beep_Red", "DLC_HEIST_HACKING_SNAKE_SOUNDS", true);
         }
         mp.game.graphics.setTimecycleModifier("MP_Powerplay_blend");
-        mp.game.graphics.setTimecycleModifierStrength(0.6);
+        mp.game.graphics.setTimecycleModifierStrength(0.75);
     } else {
-        stormAlpha = Math.max(0, stormAlpha - 6);
+        stormAlpha = Math.max(0, stormAlpha - 8);
         if (stormAlpha === 0) {
             mp.game.graphics.clearTimecycleModifier();
         }
     }
 
+    // Full-screen gradient purple overlay when in storm (smooth, no lines)
     if (stormAlpha > 0) {
-        mp.game.graphics.drawRect(0.5, 0.5, 1, 1, STORM_OVERLAY.r, STORM_OVERLAY.g, STORM_OVERLAY.b, stormAlpha, false);
+        mp.game.graphics.drawRect(0.5, 0.5, 1, 1, 90, 45, 130, stormAlpha, false);
     }
 
     if (warnUntil > Date.now()) {
@@ -195,9 +181,5 @@ mp.events.add("render", () => {
             outline: true,
             centre: true
         });
-    }
-
-    if (zoneBlip) {
-        // radius blip is recreated on update; nothing to do per frame
     }
 });

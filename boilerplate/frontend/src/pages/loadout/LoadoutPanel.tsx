@@ -10,7 +10,7 @@ interface WeaponComp {
     recoilModifier: number;
 }
 
-type WeaponCategory = "pistols" | "rifles" | "shotguns";
+type WeaponCategory = "pistols" | "smg" | "rifles" | "shotguns";
 
 interface WeaponDef {
     weaponHash: number;
@@ -99,14 +99,126 @@ const WEAPONS: WeaponDef[] = [
             { hash: 1319990579, name: "Yusuf Amir Luxury Finish", category: "skin", recoilModifier: 1.0 },
         ]
     },
+    {
+        weaponHash: 1593441988, weaponName: "weapon_combatpistol", displayName: "Combat Pistol", icon: "CP", accent: "#9b59b6", category: "pistols",
+        components: [
+            { hash: 119655033, name: "Default Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 3596571437, name: "Extended Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 899381934, name: "Flashlight", category: "flashlight", recoilModifier: 1.0 },
+            { hash: 3271853210, name: "Suppressor", category: "muzzle", recoilModifier: 0.95 },
+            { hash: 3328267634, name: "Yusuf Amir Luxury Finish", category: "skin", recoilModifier: 1.0 },
+        ]
+    },
+    {
+        weaponHash: 3523564046, weaponName: "weapon_heavypistol", displayName: "Heavy Pistol", icon: "HP", accent: "#8e44ad", category: "pistols",
+        components: [
+            { hash: 222992026, name: "Default Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 1694090795, name: "Extended Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 899381934, name: "Flashlight", category: "flashlight", recoilModifier: 1.0 },
+            { hash: 3271853210, name: "Suppressor", category: "muzzle", recoilModifier: 0.95 },
+            { hash: 2053799099, name: "Etched Wood Grip Finish", category: "skin", recoilModifier: 1.0 },
+        ]
+    },
+    {
+        weaponHash: 736523883, weaponName: "weapon_smg", displayName: "SMG", icon: "SMG", accent: "#3498db", category: "smg",
+        components: [
+            { hash: 643830487, name: "Default Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 889916667, name: "Extended Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 2041522294, name: "Drum Magazine", category: "clip", recoilModifier: 1.0 },
+            { hash: 2076495324, name: "Flashlight", category: "flashlight", recoilModifier: 1.0 },
+            { hash: 1006670047, name: "Scope", category: "scope", recoilModifier: 1.0 },
+            { hash: 3271853210, name: "Suppressor", category: "muzzle", recoilModifier: 0.9 },
+            { hash: 663517328, name: "Yusuf Amir Luxury Finish", category: "skin", recoilModifier: 1.0 },
+        ]
+    },
+    {
+        weaponHash: 171789620, weaponName: "weapon_combatpdw", displayName: "Combat PDW", icon: "PDW", accent: "#1abc9c", category: "smg",
+        components: [
+            { hash: 1129462574, name: "Default Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 859604227, name: "Extended Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 1857608283, name: "Drum Magazine", category: "clip", recoilModifier: 1.0 },
+            { hash: 2076495324, name: "Flashlight", category: "flashlight", recoilModifier: 1.0 },
+            { hash: 2855028148, name: "Scope", category: "scope", recoilModifier: 1.0 },
+            { hash: 202788691, name: "Grip", category: "grip", recoilModifier: 0.8 },
+        ]
+    },
+    {
+        weaponHash: 2210333304, weaponName: "weapon_carbinerifle", displayName: "Carbine Rifle", icon: "CR", accent: "#e74c3c", category: "rifles",
+        components: [
+            { hash: 3334989185, name: "Default Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 2089537806, name: "Extended Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 2076495324, name: "Flashlight", category: "flashlight", recoilModifier: 1.0 },
+            { hash: 2698550338, name: "Scope", category: "scope", recoilModifier: 1.0 },
+            { hash: 2805810788, name: "Suppressor", category: "muzzle", recoilModifier: 0.9 },
+            { hash: 202788691, name: "Grip", category: "grip", recoilModifier: 0.8 },
+        ]
+    },
+    {
+        weaponHash: 2937143193, weaponName: "weapon_advancedrifle", displayName: "Advanced Rifle", icon: "ADV", accent: "#e67e22", category: "rifles",
+        components: [
+            { hash: 3193891350, name: "Default Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 2971750299, name: "Extended Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 2076495324, name: "Flashlight", category: "flashlight", recoilModifier: 1.0 },
+            { hash: 2855028148, name: "Scope", category: "scope", recoilModifier: 1.0 },
+            { hash: 2805810788, name: "Suppressor", category: "muzzle", recoilModifier: 0.9 },
+            { hash: 202788691, name: "Grip", category: "grip", recoilModifier: 0.8 },
+        ]
+    },
+    {
+        weaponHash: 3800352039, weaponName: "weapon_assaultshotgun", displayName: "Assault Shotgun", icon: "AS", accent: "#f39c12", category: "shotguns",
+        components: [
+            { hash: 2498213963, name: "Default Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 2258927634, name: "Extended Clip", category: "clip", recoilModifier: 1.0 },
+            { hash: 2076495324, name: "Flashlight", category: "flashlight", recoilModifier: 1.0 },
+            { hash: 2205435306, name: "Suppressor", category: "muzzle", recoilModifier: 0.92 },
+            { hash: 202788691, name: "Grip", category: "grip", recoilModifier: 0.8 },
+        ]
+    },
+    {
+        weaponHash: 984333226, weaponName: "weapon_combatshotgun", displayName: "Combat Shotgun", icon: "CS", accent: "#d35400", category: "shotguns",
+        components: [
+            { hash: 2076495324, name: "Flashlight", category: "flashlight", recoilModifier: 1.0 },
+            { hash: 2205435306, name: "Suppressor", category: "muzzle", recoilModifier: 0.92 },
+        ]
+    },
 ];
+
+const WEAPON_IMAGES: Record<string, string> = {
+    weapon_pistol50: new URL("../../assets/images/hud/weapons/weapon_pistol50.svg", import.meta.url).href,
+    weapon_specialcarbine: new URL("../../assets/images/hud/weapons/weapon_specialcarbine.svg", import.meta.url).href,
+    weapon_bullpuprifle: new URL("../../assets/images/hud/weapons/weapon_bullpuprifle.svg", import.meta.url).href,
+    weapon_carbinerifle_mk2: new URL("../../assets/images/hud/weapons/weapon_carbinerifle_mk2.svg", import.meta.url).href,
+    weapon_pumpshotgun: new URL("../../assets/images/hud/weapons/weapon_pumpshotgun.svg", import.meta.url).href,
+    weapon_assaultrifle: new URL("../../assets/images/hud/weapons/weapon_assaultrifle.svg", import.meta.url).href,
+    weapon_combatpistol: new URL("../../assets/images/hud/weapons/weapon_combatpistol.svg", import.meta.url).href,
+    weapon_heavypistol: new URL("../../assets/images/hud/weapons/weapon_heavypistol.svg", import.meta.url).href,
+};
+
+/** Rough stat values per category for display (no purchase - just visual) */
+const CATEGORY_STATS: Record<WeaponCategory, { damage: number; fireRate: number }> = {
+    pistols: { damage: 55, fireRate: 65 },
+    smg: { damage: 45, fireRate: 90 },
+    rifles: { damage: 75, fireRate: 80 },
+    shotguns: { damage: 95, fireRate: 40 },
+};
 
 const CATEGORIES = ["clip", "muzzle", "grip", "scope", "barrel", "flashlight", "skin"] as const;
 const WEAPON_CATEGORIES: { id: WeaponCategory; label: string }[] = [
-    { id: "rifles", label: "RIFLES" },
-    { id: "pistols", label: "PISTOLS" },
-    { id: "shotguns", label: "SHOTGUNS" }
+    { id: "pistols", label: "Pistols" },
+    { id: "smg", label: "SMG" },
+    { id: "rifles", label: "Assault rifles" },
+    { id: "shotguns", label: "Shotguns" }
 ];
+
+const ATTACHMENT_ICONS: Record<string, string> = {
+    scope: "⊞",
+    muzzle: "◉",
+    grip: "≡",
+    clip: "▤",
+    barrel: "▬",
+    flashlight: "☀",
+    skin: "◆"
+};
 
 const LoadoutPanel: React.FC = () => {
     const [selectedWeapon, setSelectedWeapon] = React.useState(0);
@@ -136,6 +248,7 @@ const LoadoutPanel: React.FC = () => {
     const filteredWeapons = WEAPONS.filter((w) => w.category === selectedCategory);
     const weapon = filteredWeapons[selectedWeapon] ?? filteredWeapons[0] ?? WEAPONS[0];
     const weaponEquipped = equipped[weapon.weaponName] || {};
+    const weaponImage = WEAPON_IMAGES[weapon.weaponName];
 
     const toggleComponent = (comp: WeaponComp) => {
         const newEquipped = { ...equipped };
@@ -159,80 +272,133 @@ const LoadoutPanel: React.FC = () => {
     };
 
     const categoriesForWeapon = CATEGORIES.filter((cat) => weapon.components.some((c) => c.category === cat));
+    const baseStats = CATEGORY_STATS[weapon.category];
+    const recoilValue = Object.keys(weaponEquipped).length > 0
+        ? Object.keys(weaponEquipped).reduce((acc, cat) => {
+            const comp = weapon.components.find((c) => c.category === cat && c.hash === weaponEquipped[cat]);
+            return comp ? Math.min(acc, comp.recoilModifier) : acc;
+        }, 1)
+        : 1;
+    const recoilControl = Math.round(((1 - recoilValue) / 0.25) * 100); // 0.75=100%, 1.0=0%
 
     return (
         <div className={style.loadout}>
-            <div className={style.header}>
-                <span className={style.title}>WEAPON LOADOUT</span>
-                <span className={style.subtitle}>Customize attachments for your arena weapons. Changes apply at the start of each round.</span>
-            </div>
-
-            <div className={style.weaponGrid}>
-                <div className={style.categoryList}>
+            <header className={style.loadoutHeader}>
+                <h1 className={style.loadoutTitle}>LOADOUT</h1>
+                <nav className={style.catTabs}>
                     {WEAPON_CATEGORIES.map((cat) => (
                         <button
                             key={cat.id}
-                            className={`${style.categoryBtn} ${selectedCategory === cat.id ? style.categoryActive : ""}`}
-                            onClick={() => {
-                                setSelectedCategory(cat.id);
-                                setSelectedWeapon(0);
-                            }}
+                            className={`${style.catTab} ${selectedCategory === cat.id ? style.catTabActive : ""}`}
+                            onClick={() => { setSelectedCategory(cat.id); setSelectedWeapon(0); }}
                         >
                             {cat.label}
                         </button>
                     ))}
-                </div>
+                </nav>
+                <span className={style.escHint}>ESC — Close</span>
+            </header>
 
-                <div className={style.weaponList}>
-                    {filteredWeapons.map((w, i) => (
-                        <button
-                            key={w.weaponName}
-                            className={`${style.weaponBtn} ${i === selectedWeapon ? style.active : ""}`}
-                            onClick={() => setSelectedWeapon(i)}
-                        >
-                            <span className={style.weaponIcon} style={{ background: w.accent }}>
-                                {w.icon}
-                            </span>
-                            <span className={style.weaponLabel}>{w.displayName}</span>
-                        </button>
-                    ))}
-                </div>
-            </div>
+            <div className={style.loadoutGrid}>
+                <aside className={style.weaponSidebar}>
+                    <ul className={style.weaponList}>
+                        {filteredWeapons.map((w, i) => (
+                            <li key={w.weaponName}>
+                                <button
+                                    className={`${style.weaponItem} ${i === selectedWeapon ? style.weaponItemActive : ""}`}
+                                    onClick={() => setSelectedWeapon(i)}
+                                    title={w.displayName}
+                                >
+                                    {WEAPON_IMAGES[w.weaponName] ? (
+                                        <img className={style.weaponThumb} src={WEAPON_IMAGES[w.weaponName]} alt="" />
+                                    ) : (
+                                        <span className={style.weaponIcon} style={{ background: w.accent }}>{w.icon}</span>
+                                    )}
+                                    <div className={style.weaponItemInfo}>
+                                        <span className={style.weaponLabel}>{w.displayName}</span>
+                                        <span className={style.weaponCat}>{w.category}</span>
+                                    </div>
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                </aside>
 
-            <div className={style.attachments}>
-                <div className={style.weaponHeader}>
-                    <div className={style.weaponPreview}>
-                        <IconGun className={style.weaponSvg} />
-                        <div className={style.weaponTitle}>{weapon.displayName}</div>
+                <div className={style.weaponPreview}>
+                    <div className={style.previewBg} />
+                    {weaponImage ? (
+                        <img className={style.previewImg} src={weaponImage} alt="" />
+                    ) : (
+                        <IconGun className={style.previewSvg} />
+                    )}
+                    <div className={style.previewLabel}>
+                        <span className={style.previewName}>{weapon.displayName}</span>
+                        <span className={style.previewCat}>{weapon.category}</span>
                     </div>
                 </div>
-                {categoriesForWeapon.map((cat) => {
-                    const comps = weapon.components.filter((c) => c.category === cat);
-                    if (comps.length === 0) return null;
-                    return (
-                        <div key={cat} className={style.category}>
-                            <div className={style.catLabel}>{cat.toUpperCase()}</div>
-                            <div className={style.compList}>
-                                {comps.map((comp) => {
-                                    const isEquipped = weaponEquipped[cat] === comp.hash;
-                                    return (
-                                        <button
-                                            key={comp.hash}
-                                            className={`${style.compBtn} ${isEquipped ? style.compActive : ""}`}
-                                            onClick={() => toggleComponent(comp)}
-                                        >
-                                            <span className={style.compName}>{comp.name}</span>
-                                        </button>
-                                    );
-                                })}
+
+                <aside className={style.attachments}>
+                    <section className={style.attSection}>
+                        <h3 className={style.attSectionTitle}>Attachments</h3>
+                        <div className={style.compGrid}>
+                            {categoriesForWeapon.map((cat) => {
+                                const comps = weapon.components.filter((c) => c.category === cat);
+                                if (comps.length === 0) return null;
+                                return (
+                                    <div key={cat} className={style.compGroup}>
+                                        <span className={style.catLabel}>
+                                            {ATTACHMENT_ICONS[cat] && <span className={style.catIcon}>{ATTACHMENT_ICONS[cat]}</span>}
+                                            {cat}
+                                        </span>
+                                        <div className={style.compRow}>
+                                            {comps.map((comp) => {
+                                                const isEquipped = weaponEquipped[cat] === comp.hash;
+                                                return (
+                                                    <button
+                                                        key={comp.hash}
+                                                        className={`${style.compBtn} ${isEquipped ? style.compActive : ""}`}
+                                                        onClick={() => toggleComponent(comp)}
+                                                        title={comp.name}
+                                                    >
+                                                        {comp.name}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </section>
+
+                    <section className={style.statsSection}>
+                        <h3 className={style.attSectionTitle}>Weapon features</h3>
+                        <div className={style.statBars}>
+                            <div className={style.statRow}>
+                                <span className={style.statLabel}>Damage</span>
+                                <div className={style.statBar}>
+                                    <div className={style.statFill} style={{ width: `${baseStats.damage}%` }} />
+                                </div>
+                            </div>
+                            <div className={style.statRow}>
+                                <span className={style.statLabel}>Fire rate</span>
+                                <div className={style.statBar}>
+                                    <div className={style.statFill} style={{ width: `${baseStats.fireRate}%` }} />
+                                </div>
+                            </div>
+                            <div className={style.statRow}>
+                                <span className={style.statLabel}>Recoil control</span>
+                                <div className={style.statBar}>
+                                    <div className={style.statFill} style={{ width: `${Math.max(0, Math.min(100, recoilControl))}%` }} />
+                                </div>
                             </div>
                         </div>
-                    );
-                })}
+                    </section>
 
-                <button className={style.saveBtn} onClick={savePreset} disabled={saving}>
-                    {saving ? "SAVING..." : "SAVE LOADOUT"}
-                </button>
+                    <button className={style.saveBtn} onClick={savePreset} disabled={saving}>
+                        {saving ? "SAVING..." : "SAVE LOADOUT"}
+                    </button>
+                </aside>
             </div>
         </div>
     );
