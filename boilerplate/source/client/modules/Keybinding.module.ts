@@ -58,18 +58,10 @@ PlayerKeybind.addKeybind(
     { keyCode: 113, up: false },
     () => {
         if (!mp.players.local.getVariable("loggedin") || Client.isDead) return;
-        if (Browser.currentPage === "arena_hud") {
-            // In hopouts, F2 only toggles cursor for clicking (e.g. LEAVE button), not player menu
-            Browser.toggleCursorForClick();
-            return;
-        }
-        if (Browser.currentPage === "playerMenu") {
-            Browser.closePage();
-        } else if (!Browser.currentPage || Browser.currentPage === "hud") {
-            Browser.processEvent("cef::system:setPage", "playerMenu");
-        }
+        // F2 only toggles cursor across the whole server (no player menu)
+        Browser.toggleCursorForClick();
     },
-    "Player menu (F2) / Hopouts cursor (F2)"
+    "Toggle cursor (F2)"
 );
 
 // Hold right-click in clothing menu to orbit camera and view character

@@ -75,11 +75,12 @@ RAGERP.commands.add({
 });
 
 RAGERP.commands.add({
-    name: "weapon",
-    description: "Give weapon: /weapon [name] (e.g. weapon_pistol)",
+    name: "giveweapon",
+    aliases: ["givewep"],
+    description: "Give weapon: /giveweapon [name] (e.g. weapon_pistol)",
     adminlevel: ADMIN_DEV,
     run: (player: PlayerMp, _fulltext: string, weaponName: string) => {
-        if (!weaponName || !weaponName.trim()) return RAGERP.chat.sendSyntaxError(player, "/weapon [name]");
+        if (!weaponName || !weaponName.trim()) return RAGERP.chat.sendSyntaxError(player, "/giveweapon [name]");
         const hash = mp.joaat(weaponName.trim().toLowerCase());
         if (hash === 0) return player.showNotify(RageShared.Enums.NotifyType.TYPE_ERROR, "Invalid weapon name.");
         player.giveWeapon(hash, 999);

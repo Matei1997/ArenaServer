@@ -67,7 +67,8 @@ mp.events.add("render", () => {
                 255,
                 255,
                 255,
-                255
+                255,
+                false
             );
             mp.game.graphics.drawText(
                 getDirection(tickDegree) + " ",
@@ -88,7 +89,8 @@ mp.events.add("render", () => {
                 TICK.r,
                 TICK.g,
                 TICK.b,
-                TICK.a
+                TICK.a,
+                false
             );
         } else {
             mp.game.graphics.drawRect(
@@ -99,7 +101,8 @@ mp.events.add("render", () => {
                 TICK.r,
                 TICK.g,
                 TICK.b,
-                TICK.a
+                TICK.a,
+                false
             );
         }
         tickDegree += TICKS_BETWEEN;

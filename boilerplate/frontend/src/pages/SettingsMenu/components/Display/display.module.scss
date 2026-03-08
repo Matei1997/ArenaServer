@@ -1,106 +1,90 @@
+@import "../../../../styles/vars.scss";
+
 .displaysettings {
     display: flex;
-    gap: 10vh;
-    height: 71.1111111111111vh;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 3vh;
+    justify-content: flex-start;
+}
 
-    .box {
-        display: flex;
-        flex-direction: column;
+.box {
+    display: flex;
+    flex-direction: column;
+    gap: 1vh;
 
-        &:last-of-type {
-            margin-right: 0;
-        }
-
-        .right {
-            margin-left: 9.166666666666666vh;
-        }
-
-        .title {
-            font-family: 'Beast Duh', sans-serif;
-            font-size: 2.1296296296296293vh;
-            color: #EAEAEA;
-        }
-
-        .container {
-            margin-top: 3.148148148148148vh;
-
-            display: flex;
-            flex-direction: column;
-
-            .option {
-                margin-bottom: 1.8518518518518516vh;
-                width: 35.925925925925924vh;
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-
-                .title {
-                    width: 27.59259259259259vh;
-                    font-family: Arial, Helvetica, sans-serif;
-                    font-size: 1.3888888888888888vh;
-                    color: #EAEAEA;
-                    text-transform: uppercase;
-                }
-
-                .buttons {
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-
-                    gap: 1vh;
-
-                    .button {
-                        width: 7vh;
-                        height: 4vh;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        border: .2vh solid rgba(255, 255, 255, 0.1);
-                        background: rgba(255, 255, 255, 0.05);
-                        font-family: Arial, Helvetica, sans-serif;
-
-
-                        .box {
-                            margin-right: 3.7037037037037033vh;
-
-                            width: 3.7037037037037033vh;
-                            height: 100%;
-
-                            background: #AEAEAE;
-                            text-shadow: 0 0 0.09259259259259259vh rgba(0, 0, 0, 0.16);
-
-                            transition: all 0.3s;
-
-
-                            &:hover {
-                                background: #EAEAEA;
-                            }
-                        }
-                    }
-
-                }
-
-
-                &:last-of-type {
-                    margin-bottom: 0;
-                }
-            }
-
-            // height: 65.74074074074073vh;
-
-        }
+    .title {
+        font-family: $global-font;
+        font-size: 1.2vh;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        color: $hud-text-muted;
+        text-transform: uppercase;
     }
 
+    .container {
+        display: flex;
+        flex-direction: column;
+        gap: 1.2vh;
+    }
 }
 
-.active_green {
-    background: #B6D300 !important;
+.option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1vh 1.2vh;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid $glass-border;
+    border-radius: 0.5vh;
+    transition: all 0.2s ease;
 
-    transition: background ease-in .2s;
-}
+    .title {
+        font-size: 1.1vh;
+        font-weight: 600;
+        color: $hud-text;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
 
-.active_white {
-    background: red !important;
-    color: black;
-    transition: background ease-in .2s;
+    .buttons {
+        display: flex;
+        align-items: center;
+        gap: 0.5vh;
+    }
+
+    .button {
+        min-width: 5vh;
+        height: 2.8vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid $glass-border;
+        border-radius: 0.4vh;
+        background: rgba(255, 255, 255, 0.04);
+        font-family: $global-font;
+        font-size: 1vh;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        color: $hud-text-muted;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: $hud-text;
+        }
+
+        &.active_green {
+            background: rgba($success, 0.2);
+            border-color: rgba($success, 0.5);
+            color: $success;
+        }
+
+        &.active_white {
+            background: rgba($hud-text-muted, 0.2);
+            border-color: $glass-border;
+            color: $hud-text-muted;
+        }
+    }
 }

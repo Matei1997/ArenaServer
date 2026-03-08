@@ -193,8 +193,9 @@ const ArenaHudInner: React.FC = observer(() => {
                 <div className={style.teammates}>
                     {teammates.map((p) => {
                         const isMe = p.id === myId;
-                        const hp = Math.max(0, Math.min(100, p.health ?? (isMe ? vitals.health : 0)));
-                        const ap = Math.max(0, Math.min(100, p.armor ?? (isMe ? vitals.armor : 0)));
+                        // Use client vitals for local player (real-time); server data for teammates
+                        const hp = Math.max(0, Math.min(100, isMe ? vitals.health : (p.health ?? 0)));
+                        const ap = Math.max(0, Math.min(100, isMe ? vitals.armor : (p.armor ?? 0)));
                         return (
                             <div key={p.id} className={`${style.teammate} ${!p.alive ? style.dead : ""}`}>
                                 <span className={style.tmName}>{p.name}{isMe ? " (YOU)" : ""}</span>
@@ -281,7 +282,7 @@ const ArenaHudInner: React.FC = observer(() => {
                 )}
             </div>
 
-            {/* Bottom right: weapon, health, leave */}
+            {/* Bottom right: weapon, health */}
             <div className={style.bottomRight}>
                 {playerStore.data.weapondata && (
                     <div className={style.weapon}>
@@ -290,12 +291,6 @@ const ArenaHudInner: React.FC = observer(() => {
                         </span>
                     </div>
                 )}
-                <button
-                    className={style.leaveMatchBtn}
-                    onClick={() => EventManager.emitServer("arena", "leaveMatch")}
-                >
-                    LEAVE
-                </button>
             </div>
         </div>
     );

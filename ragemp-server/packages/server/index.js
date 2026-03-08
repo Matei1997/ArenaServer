@@ -5642,6 +5642,7 @@ _api_1.RAGERP.commands.add({
 });
 _api_1.RAGERP.commands.add({
     name: "tp",
+    aliases: ["tpc"],
     description: "Teleport to x y z",
     adminlevel: ADMIN_DEV,
     run: (player, _fulltext, x, y, z) => {
@@ -5654,6 +5655,51 @@ _api_1.RAGERP.commands.add({
             return player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "Invalid coordinates.");
         player.position = new mp.Vector3(px, py, pz);
         player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, `Teleported to ${px.toFixed(1)}, ${py.toFixed(1)}, ${pz.toFixed(1)}`);
+    }
+});
+_api_1.RAGERP.commands.add({
+    name: "anim",
+    description: "Play animation: /anim [dict] [name]",
+    adminlevel: ADMIN_DEV,
+    run: (player, _fulltext, dict, name) => {
+        if (!dict || !name)
+            return _api_1.RAGERP.chat.sendSyntaxError(player, "/anim [dict] [name]");
+        player.playAnimation(dict, name, 1, 1);
+        player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, `Animation ${dict}/${name} playing.`);
+    }
+});
+_api_1.RAGERP.commands.add({
+    name: "anims",
+    description: "Stop current animation",
+    adminlevel: ADMIN_DEV,
+    run: (player) => {
+        player.stopAnimation();
+        player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, "Animation stopped.");
+    }
+});
+_api_1.RAGERP.commands.add({
+    name: "giveweapon",
+    aliases: ["givewep"],
+    description: "Give weapon: /giveweapon [name] (e.g. weapon_pistol)",
+    adminlevel: ADMIN_DEV,
+    run: (player, _fulltext, weaponName) => {
+        if (!weaponName || !weaponName.trim())
+            return _api_1.RAGERP.chat.sendSyntaxError(player, "/giveweapon [name]");
+        const hash = mp.joaat(weaponName.trim().toLowerCase());
+        if (hash === 0)
+            return player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "Invalid weapon name.");
+        player.giveWeapon(hash, 999);
+        player.showNotify("success" /* RageShared.Enums.NotifyType.TYPE_SUCCESS */, `Weapon ${weaponName} given.`);
+    }
+});
+_api_1.RAGERP.commands.add({
+    name: "d",
+    aliases: ["die", "kill"],
+    description: "Kill yourself (for testing)",
+    adminlevel: ADMIN_DEV,
+    run: (player) => {
+        player.health = 0;
+        player.showNotify("info" /* RageShared.Enums.NotifyType.TYPE_INFO */, "You died.");
     }
 });
 _api_1.RAGERP.commands.add({
@@ -6071,8 +6117,8 @@ _api_1.RAGERP.commands.add({
 });
 _api_1.RAGERP.commands.add({
     name: "fgun",
-    aliases: ["fweapon", "weapon", "gun", "wep"],
-    description: "Give yourself a weapon (e.g. /fgun pistol, /weapon assaultrifle)",
+    aliases: ["fweapon", "gun", "wep"],
+    description: "Give yourself a weapon (e.g. /fgun pistol, /gun assaultrifle)",
     run: (player, _fulltext, weaponName) => {
         if (!player.getVariable("loggedin"))
             return player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "You must be logged in.");
@@ -11215,6 +11261,71 @@ mp.Player.prototype.attachObject = function (name, attached) {
 
 /***/ },
 
+/***/ "./source/server/serverevents/Admin.event.ts"
+/*!***************************************************!*\
+  !*** ./source/server/serverevents/Admin.event.ts ***!
+  \***************************************************/
+(__unused_webpack_module, exports, __webpack_require__) {
+
+
+/**
+ * Admin panel CEF events - execute commands from UI, close panel.
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const _api_1 = __webpack_require__(/*! @api */ "./source/server/api/index.ts");
+const Command_class_1 = __webpack_require__(/*! @classes/Command.class */ "./source/server/classes/Command.class.ts");
+function runCommand(player, commandText) {
+    const trimmed = commandText.trim();
+    if (!trimmed.length)
+        return;
+    const msg = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+    const args = msg.substring(1).trim().split(/ +/);
+    const name = args.shift();
+    if (!name)
+        return;
+    const fullText = msg.substring(name.length + 1).trim();
+    const command = Command_class_1.CommandRegistry.find(name);
+    if (!command) {
+        player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, `Unknown command: /${name}`);
+        return;
+    }
+    if (command.adminlevel && command.adminlevel > player.getAdminLevel()) {
+        player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "You are not authorized to use this command.");
+        return;
+    }
+    try {
+        if (command.run.constructor.name === "AsyncFunction") {
+            command.run(player, fullText, ...args);
+        }
+        else {
+            command.run(player, fullText, ...args);
+        }
+    }
+    catch (e) {
+        console.error("[Admin Panel] Command error:", e);
+        player.showNotify("error" /* RageShared.Enums.NotifyType.TYPE_ERROR */, "Command failed.");
+    }
+}
+_api_1.RAGERP.cef.register("admin", "executeCommand", (player, data) => {
+    if (!player?.account || player.account.adminlevel <= 0)
+        return;
+    let cmd;
+    try {
+        const parsed = typeof data === "string" ? JSON.parse(data) : data;
+        cmd = typeof parsed === "string" ? parsed : parsed?.command ?? String(parsed);
+    }
+    catch {
+        cmd = String(data);
+    }
+    runCommand(player, cmd);
+});
+_api_1.RAGERP.cef.register("admin", "close", (player) => {
+    _api_1.RAGERP.cef.emit(player, "system", "setPage", "hud");
+});
+
+
+/***/ },
+
 /***/ "./source/server/serverevents/Arena.event.ts"
 /*!***************************************************!*\
   !*** ./source/server/serverevents/Arena.event.ts ***!
@@ -11624,31 +11735,43 @@ const boneMultipliers = {
     Right_Food: 1,
     Left_Food: 1
 };
-// baseDamage and minDamage (sync uses /10 scale)
+// Per-weapon damage: base/min for body, head for headshots (neverDM-style).
+// Head uses explicit value when set; otherwise boneMultiplier applies.
 const weaponDamage = {
-    [String(mp.joaat("weapon_pistol"))]: { base: 20, min: 10 },
-    [String(mp.joaat("weapon_pistol_mk2"))]: { base: 20, min: 10 },
-    [String(mp.joaat("weapon_combatpistol"))]: { base: 20, min: 10 },
-    [String(mp.joaat("weapon_heavypistol"))]: { base: 20, min: 10 },
-    [String(mp.joaat("weapon_appistol"))]: { base: 20, min: 10 },
-    [String(mp.joaat("weapon_pistol50"))]: { base: 20, min: 10 },
-    [String(mp.joaat("weapon_microsmg"))]: { base: 20, min: 8 },
-    [String(mp.joaat("weapon_smg"))]: { base: 20, min: 8 },
-    [String(mp.joaat("weapon_assaultrifle"))]: { base: 28, min: 10 },
-    [String(mp.joaat("weapon_assaultrifle_mk2"))]: { base: 23, min: 10 },
-    [String(mp.joaat("weapon_carbinerifle"))]: { base: 23, min: 6 },
-    [String(mp.joaat("weapon_specialcarbine"))]: { base: 23, min: 10 },
-    [String(mp.joaat("weapon_sniperrifle"))]: { base: 40, min: 5 },
-    [String(mp.joaat("weapon_heavysniper"))]: { base: 40, min: 5 },
-    [String(mp.joaat("weapon_pumpshotgun"))]: { base: 30, min: 5 },
-    [String(mp.joaat("weapon_sawnoffshotgun"))]: { base: 30, min: 5 },
-    [String(mp.joaat("weapon_mg"))]: { base: 13, min: 5 }
+    [String(mp.joaat("weapon_pistol"))]: { base: 18, min: 9, head: 35 },
+    [String(mp.joaat("weapon_pistol_mk2"))]: { base: 20, min: 10, head: 40 },
+    [String(mp.joaat("weapon_combatpistol"))]: { base: 20, min: 10, head: 40 },
+    [String(mp.joaat("weapon_heavypistol"))]: { base: 22, min: 10, head: 45 },
+    [String(mp.joaat("weapon_appistol"))]: { base: 16, min: 8, head: 32 },
+    [String(mp.joaat("weapon_pistol50"))]: { base: 24, min: 12, head: 50 },
+    [String(mp.joaat("weapon_microsmg"))]: { base: 14, min: 8, head: 28 },
+    [String(mp.joaat("weapon_smg"))]: { base: 16, min: 10, head: 32 },
+    [String(mp.joaat("weapon_assaultrifle"))]: { base: 22, min: 10, head: 45 },
+    [String(mp.joaat("weapon_assaultrifle_mk2"))]: { base: 24, min: 10, head: 48 },
+    [String(mp.joaat("weapon_carbinerifle"))]: { base: 22, min: 8, head: 44 },
+    [String(mp.joaat("weapon_carbinerifle_mk2"))]: { base: 24, min: 10, head: 48 },
+    [String(mp.joaat("weapon_specialcarbine"))]: { base: 22, min: 10, head: 44 },
+    [String(mp.joaat("weapon_bullpuprifle"))]: { base: 22, min: 10, head: 44 },
+    [String(mp.joaat("weapon_advancedrifle"))]: { base: 22, min: 10, head: 44 },
+    [String(mp.joaat("weapon_sniperrifle"))]: { base: 55, min: 35, head: 100 },
+    [String(mp.joaat("weapon_heavysniper"))]: { base: 55, min: 45, head: 100 },
+    [String(mp.joaat("weapon_heavysniper_mk2"))]: { base: 65, min: 50, head: 120 },
+    [String(mp.joaat("weapon_pumpshotgun"))]: { base: 45, min: 35, head: 55 },
+    [String(mp.joaat("weapon_sawnoffshotgun"))]: { base: 40, min: 30, head: 50 },
+    [String(mp.joaat("weapon_assaultshotgun"))]: { base: 35, min: 25, head: 50 },
+    [String(mp.joaat("weapon_combatshotgun"))]: { base: 40, min: 30, head: 55 },
+    [String(mp.joaat("weapon_mg"))]: { base: 18, min: 12, head: 35 },
+    [String(mp.joaat("weapon_combatmg"))]: { base: 18, min: 14, head: 36 },
+    [String(mp.joaat("weapon_combatpdw"))]: { base: 16, min: 10, head: 32 },
+    [String(mp.joaat("weapon_compactrifle"))]: { base: 20, min: 10, head: 40 }
 };
 function getBoneMultiplier(bone) {
     return boneMultipliers[bone] ?? DEFAULT_BONE_MULT;
 }
-function getWeaponDamage(weaponHash, distance) {
+function getWeaponDamage(weaponHash, distance, isHead) {
     const w = weaponDamage[weaponHash] ?? { base: DEFAULT_WEAPON_BASE, min: DEFAULT_WEAPON_MIN };
+    if (isHead && w.head !== undefined)
+        return Math.min(w.head, 200);
     let dmg = w.base / (distance / DAMAGE_RANGE_DIVISOR);
     if (dmg > w.base)
         dmg = w.base;
@@ -11676,13 +11799,12 @@ mp.events.add("server:PlayerHit", (shooter, victimId, targetBone, weaponHash) =>
             return;
     }
     const distance = utils_module_1.Utils.distanceToPos(shooter.position, victim.position);
-    const weaponDmg = getWeaponDamage(weaponHash, Math.max(1, distance));
-    const boneMult = getBoneMultiplier(targetBone);
+    const isHead = targetBone === "Head";
+    const weaponDmg = getWeaponDamage(weaponHash, Math.max(1, distance), isHead);
+    const boneMult = isHead ? 1 : getBoneMultiplier(targetBone);
     const finalDamage = weaponDmg * boneMult;
     const from = shooter.position;
     victim.call("client:GiveDamage", [finalDamage, from.x, from.y, from.z]);
-    // Headshot: use body multiplier for damage calc but mark as head for hitmarker
-    const isHead = targetBone === "Head";
     const hitStatus = isHead ? 3 : victim.armour > 0 ? 2 : 1; // 1=health, 2=armour, 3=head
     shooter.call("client:ShowHitmarker", [finalDamage, victim.position.x, victim.position.y, victim.position.z, hitStatus]);
 });
@@ -12639,6 +12761,7 @@ __webpack_require__(/*! @events/Point.event */ "./source/server/serverevents/Poi
 __webpack_require__(/*! @events/Wardrobe.event */ "./source/server/serverevents/Wardrobe.event.ts");
 __webpack_require__(/*! @events/MainMenu.event */ "./source/server/serverevents/MainMenu.event.ts");
 __webpack_require__(/*! @events/PlayerMenu.event */ "./source/server/serverevents/PlayerMenu.event.ts");
+__webpack_require__(/*! @events/Admin.event */ "./source/server/serverevents/Admin.event.ts");
 __webpack_require__(/*! @arena/ArenaMatch.manager */ "./source/server/arena/ArenaMatch.manager.ts");
 __webpack_require__(/*! @events/Arena.event */ "./source/server/serverevents/Arena.event.ts");
 //---------------------------------------//

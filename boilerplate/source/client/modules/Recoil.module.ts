@@ -1,7 +1,10 @@
 /**
  * Client-side weapon recoil: detects firing via ammo count changes each frame,
  * applies per-weapon-category camera kick with server-driven attachment modifier.
+ * Disabled in arena (hopouts) - custom recoil causes aim to snap to eye level.
  */
+
+import { Browser } from "@classes/Browser.class";
 
 interface RecoilProfile {
     vertical: number;
@@ -95,6 +98,8 @@ mp.events.add("client::recoil:reset", () => {
 });
 
 mp.events.add("render", () => {
+    if (Browser.currentPage === "arena_hud") return;  // Disable in hopouts - causes aim snap to eye level
+
     const player = mp.players.local;
     if (!player || !mp.players.exists(player)) return;
     if (player.getHealth() <= 0) return;

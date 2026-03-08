@@ -9,7 +9,9 @@ mp.events.add("render", () => {
     const player = mp.players.local;
     if (!player || !mp.players.exists(player)) return;
 
-    const health = Math.max(0, Math.min(100, player.getHealth() - 100));
+    // GTA health: 0-200 (200=full) or 0-100 in some builds; normalize to 0-100
+    const rawHealth = player.getHealth();
+    const health = rawHealth > 100 ? Math.min(100, rawHealth - 100) : Math.min(100, rawHealth);
     const armor = Math.max(0, Math.min(100, player.getArmour?.() ?? player.armour ?? 0));
 
     if (health === lastHealth && armor === lastArmor) return;

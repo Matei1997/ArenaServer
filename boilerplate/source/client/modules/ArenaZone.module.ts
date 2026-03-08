@@ -1,6 +1,6 @@
 /**
  * Client-side arena zone rendering.
- * Draws a shrinking circle in the game world and on the minimap.
+ * Storm = boundary at zone edge. When outside: gradient purple tint only (no 3D lines).
  */
 
 let zoneActive = false;
@@ -18,15 +18,10 @@ let stormAlpha = 0;
 let lastStormSoundAt = 0;
 
 const ZONE_SEGMENTS = 96;
-const ZONE_COLOR = { r: 100, g: 200, b: 255, a: 95 };       // Brighter safe zone boundary
-const ZONE_GLOW_COLOR = { r: 140, g: 220, b: 255, a: 65 };  // Stronger glow
-const ZONE_WALL_HEIGHT = 55;                                 // Taller visible wall
-const STORM_COLOR = { r: 200, g: 100, b: 255, a: 255 };     // Very visible storm ring
-const STORM_WALL_HEIGHT = 85;
-const STORM_RING_MAX_OFFSET = 60;
-const STORM_RING_SPEED = 1.8;
+const ZONE_COLOR = { r: 100, g: 200, b: 255, a: 95 };
+const ZONE_GLOW_COLOR = { r: 140, g: 220, b: 255, a: 65 };
+const ZONE_WALL_HEIGHT = 55;
 const STORM_WARN_SECONDS = 12;
-const STORM_OVERLAY = { r: 100, g: 50, b: 150 };            // Strong purple outside-zone tint
 
 mp.events.add("client::arena:requestCollision", (x: number, y: number, z: number) => {
     mp.game.streaming.requestCollisionAtCoord(x, y, z);
@@ -128,12 +123,8 @@ mp.events.add("render", () => {
 
     const pulse = (Math.sin(Date.now() / 450) + 1) * 0.5;
     const glowAlpha = Math.floor(ZONE_GLOW_COLOR.a + pulse * 20);
-    const phaseElapsed = zonePhaseUpdatedAt ? Math.floor((Date.now() - zonePhaseUpdatedAt) / 1000) : 0;
-    const phaseTimeLeft = Math.max(0, zonePhaseTimeLeft - phaseElapsed);
-    const stormOffset = Math.min(STORM_RING_MAX_OFFSET, phaseTimeLeft * STORM_RING_SPEED);
-    const stormRadius = zoneRadius + stormOffset;
-    const stormRingAlpha = Math.floor(STORM_COLOR.a + pulse * 50);
 
+    // Safe zone boundary (blue) - this IS the storm boundary; cross it = you're in the storm
     for (let i = 0; i < ZONE_SEGMENTS; i++) {
         const angle1 = (i / ZONE_SEGMENTS) * Math.PI * 2;
         const angle2 = ((i + 1) / ZONE_SEGMENTS) * Math.PI * 2;
@@ -159,49 +150,27 @@ mp.events.add("render", () => {
 
         mp.game.graphics.drawLine(xg1, yg1, groundZ, xg2, yg2, groundZ,
             ZONE_GLOW_COLOR.r, ZONE_GLOW_COLOR.g, ZONE_GLOW_COLOR.b, glowAlpha);
-
-        if (stormOffset > 0.1) {
-            const sx1 = zoneCenterX + Math.cos(angle1) * stormRadius;
-            const sy1 = zoneCenterY + Math.sin(angle1) * stormRadius;
-            const sx2 = zoneCenterX + Math.cos(angle2) * stormRadius;
-            const sy2 = zoneCenterY + Math.sin(angle2) * stormRadius;
-            const stormTopZ = groundZ + STORM_WALL_HEIGHT;
-
-            // Outer glow (thicker storm ring - more visible from distance)
-            const glowR = 3;
-            const gx1 = zoneCenterX + Math.cos(angle1) * (stormRadius + glowR);
-            const gy1 = zoneCenterY + Math.sin(angle1) * (stormRadius + glowR);
-            const gx2 = zoneCenterX + Math.cos(angle2) * (stormRadius + glowR);
-            const gy2 = zoneCenterY + Math.sin(angle2) * (stormRadius + glowR);
-            mp.game.graphics.drawLine(gx1, gy1, groundZ, gx2, gy2, groundZ,
-                STORM_COLOR.r, STORM_COLOR.g, STORM_COLOR.b, Math.floor(stormRingAlpha * 0.7));
-
-            mp.game.graphics.drawLine(sx1, sy1, groundZ, sx2, sy2, groundZ,
-                STORM_COLOR.r, STORM_COLOR.g, STORM_COLOR.b, stormRingAlpha);
-            mp.game.graphics.drawLine(sx1, sy1, groundZ, sx1, sy1, stormTopZ,
-                STORM_COLOR.r, STORM_COLOR.g, STORM_COLOR.b, Math.floor(stormRingAlpha * 0.85));
-            mp.game.graphics.drawLine(sx1, sy1, stormTopZ, sx2, sy2, stormTopZ,
-                STORM_COLOR.r, STORM_COLOR.g, STORM_COLOR.b, Math.floor(stormRingAlpha * 0.75));
-        }
     }
 
+    // When OUTSIDE zone = you're IN the storm. Apply gradient purple tint (no 3D lines).
     if (isOutside) {
-        stormAlpha = Math.min(140, stormAlpha + 4);
+        stormAlpha = Math.min(120, stormAlpha + 4);
         if (Date.now() - lastStormSoundAt > 2500) {
             lastStormSoundAt = Date.now();
             mp.game.audio.playSoundFrontend(-1, "Beep_Red", "DLC_HEIST_HACKING_SNAKE_SOUNDS", true);
         }
         mp.game.graphics.setTimecycleModifier("MP_Powerplay_blend");
-        mp.game.graphics.setTimecycleModifierStrength(0.95);  // Very strong "outside zone" feel
+        mp.game.graphics.setTimecycleModifierStrength(0.75);
     } else {
-        stormAlpha = Math.max(0, stormAlpha - 6);
+        stormAlpha = Math.max(0, stormAlpha - 8);
         if (stormAlpha === 0) {
             mp.game.graphics.clearTimecycleModifier();
         }
     }
 
+    // Full-screen gradient purple overlay when in storm (smooth, no lines)
     if (stormAlpha > 0) {
-        mp.game.graphics.drawRect(0.5, 0.5, 1, 1, STORM_OVERLAY.r, STORM_OVERLAY.g, STORM_OVERLAY.b, stormAlpha, false);
+        mp.game.graphics.drawRect(0.5, 0.5, 1, 1, 90, 45, 130, stormAlpha, false);
     }
 
     if (warnUntil > Date.now()) {
@@ -212,9 +181,5 @@ mp.events.add("render", () => {
             outline: true,
             centre: true
         });
-    }
-
-    if (zoneBlip) {
-        // radius blip is recreated on update; nothing to do per frame
     }
 });

@@ -2,6 +2,7 @@ import * as React from "react";
 import { observer } from "mobx-react-lite";
 import EventManager from "utils/EventManager.util";
 import { createComponent } from "src/hoc/registerComponent";
+import { arenaStore } from "store/Arena.store";
 import { playerStore } from "store/Player.store";
 import style from "./mainmenu.module.scss";
 import LoadoutPanel from "../loadout/LoadoutPanel";
@@ -100,7 +101,14 @@ const MainMenu: React.FC = observer(() => {
                         <span className={style.gems}>0 GEMS</span>
                         <span className={style.playerName}>{displayName}</span>
                     </div>
-                    <button className={style.leaveBtn}>LEAVE THE ARENA →</button>
+                    {arenaStore.match && (
+                        <button
+                            className={style.leaveBtn}
+                            onClick={() => EventManager.emitServer("arena", "leaveMatch")}
+                        >
+                            LEAVE THE ARENA →
+                        </button>
+                    )}
                 </div>
             </header>
 

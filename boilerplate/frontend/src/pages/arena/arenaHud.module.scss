@@ -9,23 +9,23 @@
         pointer-events: none;
     }
 
-    .leaveMatchBtn,
     .itemBtn {
         pointer-events: auto;
     }
 }
 
-/* ——— Compass bar ——— */
+/* ——— Compass bar (integrated with top bar, no overlap) ——— */
 .compass {
     position: absolute;
-    top: 0.8vh;
+    top: 0.6vh;
     left: 50%;
     transform: translateX(-50%);
-    width: 32vh;
-    height: 2.6vh;
+    width: 28vh;
+    height: 2.2vh;
     overflow: hidden;
     border-radius: 0.4vh;
     pointer-events: none;
+    z-index: 2;
 }
 
 .compassBg {
@@ -82,16 +82,17 @@
     letter-spacing: 0.1em;
 }
 
-/* ——— Top bar: scores + timer ——— */
+/* ——— Top bar: scores + timer (below compass, no overlap) ——— */
 .topCenter {
     position: absolute;
-    top: 1.8vh;
+    top: 3.8vh;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 0.6vh;
+    z-index: 1;
 }
 
 .scores {
@@ -179,7 +180,7 @@
 /* ——— Zone info ——— */
 .zoneInfo {
     position: absolute;
-    top: 8.5vh;
+    top: 9.2vh;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
@@ -226,11 +227,12 @@
     border-radius: 0.5vh;
 }
 
-/* ——— Teammates ——— */
+/* ——— Teammates (left side, below zone, no overlap with center) ——— */
 .topLeft {
     position: absolute;
-    top: 11vh;
+    top: 12.5vh;
     left: 1.8vh;
+    z-index: 1;
 }
 
 .teammates {
@@ -476,25 +478,6 @@
 .ammo {
     font-size: 1.6vh;
     color: $hud-text;
-}
-
-.leaveMatchBtn {
-    margin-top: 0.8vh;
-    padding: 0.6vh 1.2vh;
-    font-size: 1.2vh;
-    font-family: $global-font;
-    background: transparent;
-    border: 1px solid rgba($accent, 0.5);
-    color: $accent-light;
-    border-radius: 0.5vh;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.leaveMatchBtn:hover {
-    background: rgba($accent, 0.15);
-    border-color: $accent;
-    color: #fff;
 }
 
 /* ——— Round overlays ——— */

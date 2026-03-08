@@ -44,7 +44,7 @@ mp.events.add("render", () => {
     mp.game.hud.hideHudComponentThisFrame(2);
     mp.game.hud.hideHudComponentThisFrame(20);
     if (Browser.currentPage === "arena_hud") {
-        // Hide minimap health/armor bars
+        // Hide cash HUD (health/armor below minimap hidden via ArenaRadar scaleform)
         mp.game.hud.hideHudComponentThisFrame(3);
         mp.game.hud.hideHudComponentThisFrame(4);
     }

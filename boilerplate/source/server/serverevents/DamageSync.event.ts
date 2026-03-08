@@ -100,8 +100,6 @@ mp.events.add("server:PlayerHit", (shooter: PlayerMp, victimId: number, targetBo
     const from = shooter.position;
     victim.call("client:GiveDamage", [finalDamage, from.x, from.y, from.z]);
 
-    // Headshot: use body multiplier for damage calc but mark as head for hitmarker
-    const isHead = targetBone === "Head";
     const hitStatus = isHead ? 3 : victim.armour > 0 ? 2 : 1; // 1=health, 2=armour, 3=head
     shooter.call("client:ShowHitmarker", [finalDamage, victim.position.x, victim.position.y, victim.position.z, hitStatus]);
 });
